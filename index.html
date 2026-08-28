@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0a0a0a">
+<title>SF2 Voces + Synth</title>
+<style>
+* { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; user-select:none; }
+:root {
+  --bg: #0a0a0a;
+  --bg-card: #121212;
+  --border: #2a2a2a;
+  --accent: #c8f03a;
+  --accent-glow: rgba(200, 240, 58, 0.4);
+  --text: #e8e8e8;
+  --text-dim: #888;
+  --red: #ff3355;
+  --orange: #ff8833;
+  --green: #33ff88;
+  --green-dim: #1a3a2a;
+  --green-border: #33aa66;
+  --green-glow: rgba(51, 255, 136, 0.5);
+  --blue: #4488ff;
+  --purple: #bb55ff;
+  --gold: #ffd700;
+  --pad-empty-bg: #1a2a3a;
+  --pad-empty-border: #4488bb;
+  --pad-loaded-bg: #1a2a1a;
+  --pad-loaded-border: #33aa66;
+  --separator: #c8f03a;
+}
+html,body { height:100%; background:var(--bg); color:var(--text); font-family:'Segoe UI', 'Courier New', monospace; overflow:hidden; touch-action:none; }
+#app { display:flex; flex-direction:column; height:100dvh; padding:4px; gap:3px; background: radial-gradient(ellipse at 20% 50%, #0f0f1a, #050505); overflow:hidden; }
+
+/* HEADER */
+header {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3px 6px 3px;
+  background: var(--bg-card); border-bottom: 2px solid var(--accent); border-radius: 10px 10px 0 0; flex-shrink: 0; width: 100%;
+}
+header .logo-main { font-size: 18px; font-weight: 800; letter-spacing: 0.06em; color: var(--text); text-shadow: 0 0 20px var(--accent-glow); display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; }
+header .logo-main span { color: var(--accent); }
+header .logo-sub { font-size: 10px; letter-spacing: 0.15em; color: var(--orange); text-transform: uppercase; font-weight: 700; text-align: center; }
+.help-btn { background: none; border: 2px solid var(--gold); color: var(--gold); font-size: 14px; font-weight: 800; width: 26px; height: 26px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0; }
+.help-btn:active { transform: scale(0.88); background: var(--gold); color: #0a0a0a; }
+
+.hdr-row { display: flex; align-items: center; justify-content: center; gap: 3px; margin-top: 3px; width: 100%; flex-wrap: wrap; }
+.hdr-btn { padding: 3px 8px; border-radius: 5px; font-size: 8px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; border: 2px solid var(--green-border); background: var(--green-dim); color: var(--green); transition: all 0.15s; flex: 1; min-width: 35px; text-align: center; }
+.hdr-btn:active { transform: scale(0.94); }
+.hdr-btn.active { background: var(--green); color: #0a0a0a; }
+.hdr-btn.assign { background: #8aaa1a; border-color: var(--accent); color: #0a0a0a; }
+.hdr-btn.load { border-color: var(--purple); color: var(--purple); background: #1a002a; }
+.hdr-btn.load:active { background: var(--purple); color: #0a0a0a; }
+
+body.hide-extra .hdr-btn:not(.help-btn):not(.status) { display: none !important; }
+
+.status { font-size: 7px; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 8px; border-radius: 12px; font-weight: 700; flex-shrink: 0; }
+.status.ready { color: var(--green); background: var(--green-dim); border: 1px solid var(--green-border); }
+.status.loading { color: var(--orange); background: #2a1a00; border: 1px solid var(--orange); animation: pulse 0.8s infinite alternate; }
+.status.error { color: var(--red); background: #2a0000; border: 1px solid var(--red); }
+.status.idle { color: var(--text-dim); background: #1a1a1a; border: 1px solid #2a2a2a; }
+@keyframes pulse { 0% { opacity: 0.5; } 100% { opacity: 1; } }
+
+#tab-bar { display: flex; gap: 3px; flex-shrink: 0; background: #0d0d0d; border: 1px solid #1a1a1a; border-radius: 5px; padding: 3px; }
+body.hide-extra #tab-bar { display: none !important; }
+
+.tab-btn { flex: 1; padding: 3px 2px; border: 2px solid transparent; border-radius: 4px; background: transparent; color: var(--text-dim); font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; cursor: pointer; transition: all 0.2s; text-align: center; }
+.tab-btn:active { transform: scale(0.94); }
+.tab-btn.active { background: var(--accent); color: #0a0a0a; border-color: var(--accent); box-shadow: 0 0 20px var(--accent-glow); }
+.tab-btn .tab-icon { font-size: 10px; margin-right: 2px; }
+
+.panel { display: none; flex-direction: column; gap: 2px; flex: 1; flex-shrink: 1; padding: 2px 0; min-height: 0; }
+.panel.active { display: flex; min-height: 0; }
+
+body.hide-extra #panel-synth { display: none !important; }
+body.hide-extra #panel-fx { display: none !important; }
+
+/* BANK TABS - COLORES MÁS VIVOS */
+#bank-tabs-container { display: flex; flex-direction: column; gap: 2px; flex-shrink: 0; padding: 1px 0; }
+.bank-row { display: flex; gap: 3px; }
+.bank-tab {
+  flex: 1;
+  padding: 2px 4px 2px 5px;
+  text-align: left;
+  background: #1a2a3a;
+  border: 2px solid #4a8aaa;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 34px;
+  position: relative;
+}
+.bank-tab:active { transform: scale(0.94); }
+.bank-tab.active {
+  background: #2a5a3a;
+  border-color: #66ff88;
+  box-shadow: 0 0 25px rgba(102, 255, 136, 0.4);
+}
+.bank-tab .bank-letter { font-size: 14px; font-weight: 800; color: #aaccee; line-height: 1; z-index: 1; }
+.bank-tab.active .bank-letter { color: #ffffff; }
+.bank-tab .bank-name { font-size: 9px; font-weight: 700; color: #88bbdd; text-transform: uppercase; line-height: 1.1; max-width: 88%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: -2px; z-index: 1; }
+.bank-tab.active .bank-name { color: #aaffcc; }
+.bank-edit-dot { position: absolute; top: 2px; right: 2px; width: 8px; height: 8px; border-radius: 50%; background: transparent; border: 2px solid var(--gold); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 5; transition: all 0.3s; }
+.bank-edit-dot::after { content: ''; width: 3px; height: 3px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 6px rgba(255, 215, 0, 0.3); transition: all 0.3s; }
+.bank-edit-dot:active { transform: scale(0.7); background: rgba(255, 215, 0, 0.15); }
+.bank-tab.active .bank-edit-dot { border-color: rgba(0, 0, 0, 0.3); }
+.bank-tab.active .bank-edit-dot::after { background: #0a0a0a; box-shadow: none; }
+
+body.hide-extra .midi-container { display: none !important; }
+body.hide-extra .export-import-container { display: none !important; }
+
+.export-import-container { flex: 1; display: flex; align-items: center; justify-content: center; gap: 3px; min-height: 30px; padding: 2px 2px; }
+.export-item, .import-item { display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; padding: 1px 3px; transition: all 0.15s; flex: 1; }
+.export-item:active, .import-item:active { transform: scale(0.92); }
+.export-item .icon, .import-item .icon { font-size: 14px; color: var(--gold); }
+.export-item .label, .import-item .label { font-size: 5px; color: var(--gold); text-transform: uppercase; font-weight: 700; letter-spacing: 0.03em; text-align: center; white-space: nowrap; }
+
+.midi-container { flex: 1; display: flex; align-items: center; justify-content: center; min-height: 30px; padding: 2px 2px; }
+.midi-item { display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; padding: 1px 3px; transition: all 0.15s; flex: 1; }
+.midi-item:active { transform: scale(0.92); }
+.midi-item .icon { font-size: 14px; color: var(--purple); }
+.midi-item .label { font-size: 5px; color: var(--purple); text-transform: uppercase; font-weight: 700; letter-spacing: 0.03em; text-align: center; white-space: nowrap; }
+.midi-item.active .icon { color: var(--green); }
+.midi-item.active .label { color: var(--green); }
+
+/* BANCOS MÁS GRANDES EN MODO OCULTO Y PANTALLA COMPLETA */
+body.hide-extra .bank-tab {
+  min-height: 52px !important;
+  padding: 6px 10px !important;
+}
+body.hide-extra .bank-tab .bank-letter {
+  font-size: 22px !important;
+}
+body.hide-extra .bank-tab .bank-name {
+  font-size: 14px !important;
+}
+body.hide-extra .bank-edit-dot {
+  width: 12px !important;
+  height: 12px !important;
+}
+body.hide-extra .bank-edit-dot::after {
+  width: 5px !important;
+  height: 5px !important;
+}
+
+#app:fullscreen body.hide-extra .bank-tab,
+#app:-webkit-full-screen body.hide-extra .bank-tab {
+  min-height: 60px !important;
+  padding: 8px 12px !important;
+}
+#app:fullscreen body.hide-extra .bank-tab .bank-letter,
+#app:-webkit-full-screen body.hide-extra .bank-tab .bank-letter {
+  font-size: 28px !important;
+}
+#app:fullscreen body.hide-extra .bank-tab .bank-name,
+#app:-webkit-full-screen body.hide-extra .bank-tab .bank-name {
+  font-size: 16px !important;
+}
+
+/* PADS */
+#pad-grid { flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); gap: 6px; min-height: 0; padding: 2px 2px; }
+.pad { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0px; cursor: pointer; position: relative; overflow: hidden; transition: all 0.08s ease; min-height: 80px; padding: 4px 2px; border-radius: 12px; box-shadow: inset 0 0 20px rgba(0,0,0,0.5), 0 2px 6px rgba(0,0,0,0.3); }
+.pad:active { transform: scale(0.95); }
+.pad.empty { background: var(--pad-empty-bg); border: 3px solid var(--pad-empty-border); }
+.pad.loaded { background: var(--pad-loaded-bg); border: 3px solid var(--pad-loaded-border); }
+.pad.selected { border-color: var(--green); background: #1a3a1a; box-shadow: 0 0 40px var(--green-glow), inset 0 0 20px var(--green-glow); }
+.pad.pressed { transform: scale(0.95); border-color: var(--accent); box-shadow: 0 0 50px var(--accent-glow), inset 0 0 20px var(--accent-glow); background: #2a3a2a; }
+.pad.pressed .pname { color: #fff; }
+.pad-indicator { position: absolute; top: 4px; right: 4px; width: 12px; height: 12px; border-radius: 50%; background: #2a2a2a; border: 2px solid #444; transition: all 0.3s; z-index: 5; }
+.pad-indicator.on { background: var(--green); border-color: var(--green); box-shadow: 0 0 20px var(--green-glow), 0 0 40px var(--green-glow); }
+.pnum { font-size: 8px; color: var(--text-dim); letter-spacing: 0.08em; z-index: 1; font-weight: 700; }
+.pname { font-size: 14px; font-weight: 800; color: var(--text); text-transform: uppercase; z-index: 1; text-align: center; padding: 0 2px; line-height: 1.1; text-shadow: 0 2px 6px rgba(0,0,0,0.8); }
+.pad.selected .pname { color: #fff; }
+.pad.empty .pname { color: #88ccff; }
+.pnote { font-size: 8px; color: var(--accent-dim); z-index: 1; font-weight: 600; }
+.pad.empty .pnote { color: #88aacc; }
+.pinfo { font-size: 6px; color: #555; z-index: 1; }
+.pad.empty .pinfo { color: #6688aa; }
+.pad-empty-icon { font-size: 28px; color: #4488bb; z-index: 1; text-shadow: 0 0 20px rgba(68, 136, 187, 0.3); }
+.pad-empty-hint { font-size: 7px; color: #6688aa; letter-spacing: 0.06em; text-transform: uppercase; z-index: 1; }
+.del-btn, .reset-btn { position: absolute; z-index: 10; background: rgba(0,0,0,0.8); border: none; border-radius: 50%; width: 24px; height: 24px; font-size: 11px; cursor: pointer; display: none; align-items: center; justify-content: center; transition: all 0.15s; backdrop-filter: blur(4px); }
+.del-btn { top: 2px; right: 2px; color: var(--red); border: 2px solid var(--red); }
+.reset-btn { bottom: 2px; left: 50%; transform: translateX(-50%); color: var(--gold); border: 2px solid var(--gold); background: rgba(0,0,0,0.8); font-size: 11px; width: 26px; height: 20px; border-radius: 4px; }
+.del-btn:active, .reset-btn:active { transform: scale(0.85); }
+.edit-mode .pad.loaded .del-btn, .edit-mode .pad.loaded .reset-btn { display: flex; }
+body.hide-extra .del-btn, body.hide-extra .reset-btn { display: none !important; }
+
+/* SYNTH / EFECTOS (sin cambios) */
+.synth-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; padding: 6px 4px; flex-shrink: 0; overflow: hidden; }
+.synth-group { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.synth-title { font-size: 14px; font-weight: 800; color: var(--text); letter-spacing: 0.08em; text-transform: uppercase; border-bottom: 2px solid var(--separator); padding-bottom: 4px; margin-bottom: 4px; grid-column: 1 / -1; }
+.synth-title .highlight { color: var(--accent); }
+.synth-divider { grid-column: 1 / -1; height: 2px; background: var(--separator); margin: 4px 0; border: none; }
+.param-row { display: flex; align-items: center; gap: 6px; padding: 3px 0; flex-wrap: nowrap; }
+.param-row label { font-size: 12px; color: #aaa; min-width: 60px; font-weight: 700; text-transform: uppercase; flex-shrink: 0; letter-spacing: 0.04em; text-align: right; }
+.param-row .btn-group { display: flex; align-items: center; gap: 4px; flex: 1; justify-content: flex-start; min-width: 0; }
+.param-row .btn-group .btn-minus, .param-row .btn-group .btn-plus { width: 36px; height: 36px; border-radius: 5px; border: 2px solid #444; background: #1a1a2a; color: var(--text); font-size: 18px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; flex-shrink: 0; touch-action: none; }
+.param-row .btn-group .btn-minus:active, .param-row .btn-group .btn-plus:active { transform: scale(0.88); background: var(--accent); color: #0a0a0a; }
+.param-row .btn-group .btn-minus { border-color: var(--orange); color: var(--orange); }
+.param-row .btn-group .btn-plus { border-color: var(--green); color: var(--green); }
+.param-row .btn-group .btn-minus:active { background: var(--orange); color: #0a0a0a; }
+.param-row .btn-group .btn-plus:active { background: var(--green); color: #0a0a0a; }
+.param-row .param-val { font-size: 13px; color: var(--accent); font-weight: 800; min-width: 48px; text-align: center; font-family: 'Courier New', monospace; flex-shrink: 0; }
+.param-row .param-val.orange { color: var(--orange); }
+.param-row .param-val.green { color: var(--green); }
+.param-row .param-val.purple { color: var(--purple); }
+.param-row .param-val.blue { color: var(--blue); }
+.param-row .param-val.gold { color: var(--gold); }
+.param-row .param-val.white { color: #fff; }
+.oct-row { display: flex; align-items: center; gap: 6px; padding: 3px 0; }
+.oct-row label { font-size: 12px; color: #aaa; min-width: 60px; font-weight: 700; text-transform: uppercase; flex-shrink: 0; letter-spacing: 0.04em; text-align: right; }
+.oct-row .btn-group { display: flex; align-items: center; gap: 4px; flex: 1; }
+.oct-row .btn-group .btn-minus, .oct-row .btn-group .btn-plus { width: 36px; height: 36px; border-radius: 5px; border: 2px solid var(--blue); background: #1a1a2a; color: var(--blue); font-size: 18px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; flex-shrink: 0; touch-action: none; }
+.oct-row .btn-group .btn-minus:active, .oct-row .btn-group .btn-plus:active { transform: scale(0.88); background: var(--blue); color: #0a0a0a; }
+.oct-row .oct-val { font-size: 15px; color: var(--accent); font-weight: 800; min-width: 32px; text-align: center; text-shadow: 0 0 20px var(--accent-glow); }
+
+/* MODALES */
+#assign-modal, #bankname-modal, #help-modal, #export-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92); align-items: center; justify-content: center; z-index: 200; backdrop-filter: blur(6px); }
+#assign-modal.show, #bankname-modal.show, #help-modal.show, #export-modal.show { display: flex; }
+.assign-box, .bankname-box, .help-box, .export-box { background: var(--bg-card); border: 2px solid var(--accent); border-radius: 16px; padding: 16px 18px; width: 88vw; max-width: 380px; display: flex; flex-direction: column; gap: 6px; box-shadow: 0 8px 60px rgba(0,0,0,0.9); }
+.export-box { border-color: var(--gold); }
+.assign-title, .bankname-title, .help-title, .export-title { font-size: 13px; color: var(--accent); font-weight: 800; text-align: center; letter-spacing: 0.08em; border-bottom: 1px solid #2a2a2a; padding-bottom: 5px; }
+.export-title { color: var(--gold); }
+.help-box { border-color: var(--gold); max-width: 420px; max-height: 80vh; overflow-y: auto; }
+.help-box .help-title { color: var(--gold); }
+.help-content { font-size: 11px; color: var(--text); line-height: 1.6; padding: 4px 0; }
+.help-content p { margin-bottom: 4px; }
+.help-content strong { color: var(--accent); }
+.help-content .credits { color: var(--gold); font-weight: 700; margin-top: 8px; border-top: 1px solid #2a2a2a; padding-top: 6px; text-align: center; }
+.help-close-btn { width: 100%; padding: 8px; background: var(--gold); border: none; border-radius: 8px; color: #0a0a0a; font-family: 'Segoe UI', monospace; font-size: 12px; font-weight: 800; text-transform: uppercase; cursor: pointer; transition: all 0.15s; margin-top: 4px; }
+.help-close-btn:active { transform: scale(0.94); background: #ffed4a; }
+.export-lbl { font-size: 10px; color: var(--text-dim); letter-spacing: 0.06em; font-weight: 700; }
+.export-box input { background: #0a0a0a; border: 2px solid #2a2a2a; color: var(--text); font-family: 'Segoe UI', monospace; font-size: 14px; padding: 8px 10px; border-radius: 6px; width: 100%; }
+.export-box input:focus { outline: none; border-color: var(--gold); }
+.export-actions { display: flex; gap: 6px; margin-top: 4px; }
+.export-actions button { flex: 1; padding: 10px; border: 2px solid #3a3a3a; font-family: 'Segoe UI', monospace; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer; border-radius: 8px; background: #1a1a1a; color: var(--text-dim); transition: all 0.15s; }
+.export-actions button:active { transform: scale(0.94); }
+.export-actions button.ok { background: var(--gold); color: #0a0a0a; border-color: var(--gold); }
+.assign-lbl { font-size: 7px; color: var(--green); letter-spacing: 0.1em; text-transform: uppercase; font-weight: 700; }
+.assign-box input, .assign-box select { background: #0a0a0a; border: 2px solid #2a2a2a; color: var(--text); font-family: 'Segoe UI', monospace; font-size: 13px; padding: 5px 8px; border-radius: 6px; width: 100%; }
+.assign-box input:focus { outline: none; border-color: var(--accent); }
+.assign-actions { display: flex; gap: 6px; margin-top: 4px; }
+.assign-actions button { flex: 1; padding: 8px; border: 2px solid #3a3a3a; font-family: 'Segoe UI', monospace; font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer; border-radius: 8px; background: #1a1a1a; color: var(--text-dim); transition: all 0.15s; }
+.assign-actions button:active { transform: scale(0.94); }
+.assign-actions button.ok { background: var(--accent); color: #0a0a0a; border-color: var(--accent); }
+.bankname-box { border-color: var(--purple); }
+.bankname-box input { background: #0a0a0a; border: 2px solid #2a2a2a; color: var(--text); font-family: 'Segoe UI', monospace; font-size: 16px; padding: 8px 12px; border-radius: 6px; width: 100%; text-align: center; text-transform: uppercase; }
+.bankname-box input:focus { outline: none; border-color: var(--purple); }
+.bankname-actions { display: flex; gap: 6px; margin-top: 4px; }
+.bankname-actions button { flex: 1; padding: 8px; border: 2px solid #3a3a3a; font-family: 'Segoe UI', monospace; font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer; border-radius: 8px; background: #1a1a1a; color: var(--text-dim); transition: all 0.15s; }
+.bankname-actions button:active { transform: scale(0.94); }
+.bankname-actions button.ok { background: var(--purple); color: #0a0a0a; border-color: var(--purple); }
+
+/* TECLADO */
+#keyboard-wrap { flex-shrink: 0; background: #0e0e0e; border: 2px solid var(--border); border-radius: 6px 6px 0 0; padding: 2px 3px 2px 3px; margin-top: auto; }
+#kb-header { display: flex; align-items: center; gap: 10px; margin-bottom: 2px; flex-wrap: wrap; justify-content: center; }
+#kb-header label { font-size: 9px; color: var(--text-dim); font-weight: 700; }
+.kb-control { display: flex; align-items: center; gap: 3px; background: var(--bg-card); border: 2px solid var(--border); border-radius: 5px; padding: 2px 6px; flex: 0 1 auto; justify-content: center; }
+.kb-control label { font-size: 9px; color: var(--text-dim); font-weight: 700; letter-spacing: 0.04em; }
+.kb-btn { background: #1a1a1a; border: 2px solid #3a3a3a; color: var(--text); font-size: 20px; width: 40px; height: 40px; border-radius: 5px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-weight: 700; transition: all 0.15s; touch-action: none; }
+.kb-btn:active { transform: scale(0.88); background: var(--green); color: #0a0a0a; }
+#oct-val { font-size: 14px; color: var(--accent); font-weight: 800; min-width: 30px; text-align: center; text-shadow: 0 0 20px var(--accent-glow); }
+.fs-btn, .hide-btn {
+  background: #1a1a2a;
+  border: 2px solid var(--gold);
+  color: var(--gold);
+  font-size: 22px;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-weight: 700;
+  transition: all 0.15s;
+}
+.fs-btn:active, .hide-btn:active { transform: scale(0.88); background: var(--gold); color: #0a0a0a; }
+.fs-btn.active { background: var(--gold); color: #0a0a0a; box-shadow: 0 0 20px rgba(255,215,0,0.3); }
+.hide-btn {
+  border-color: var(--green);
+  color: var(--green);
+  background: var(--green-dim);
+  margin-left: 6px;
+}
+.hide-btn:active { background: var(--green); color: #0a0a0a; }
+.hide-btn.active { background: var(--green); color: #0a0a0a; box-shadow: 0 0 20px var(--green-glow); }
+
+#keyboard { position: relative; height: 42px; overflow: hidden; border-radius: 4px; padding: 0 2px; }
+.key { position: absolute; border-radius: 0 0 4px 4px; cursor: pointer; touch-action: none; }
+.key.white { background: linear-gradient(180deg, #f0f0f0, #d0d0d0); border: 1px solid #999; bottom: 0; }
+.key.black { background: linear-gradient(180deg, #222, #000); border: 1px solid #444; bottom: 14px; z-index: 2; }
+.key.white.pressed { background: var(--accent); border-color: var(--accent); }
+.key.black.pressed { background: #8aaa1a; border-color: var(--accent); }
+.key-label { position: absolute; bottom: 1px; left: 50%; transform: translateX(-50%); font-size: 4px; color: #888; font-family: 'Segoe UI', monospace; pointer-events: none; font-weight: 600; }
+
+/* MIDI DIAG Y HELP - ocultables */
+#midi-diag { display: flex; flex-direction: column; gap: 2px; margin: 2px 6px; padding: 4px 8px; background: #0d0d0d; border: 1px solid var(--purple); border-radius: 5px; font-size: 9px; }
+#midi-diag.hidden { display: none; }
+body.hide-extra #midi-diag { display: none !important; }
+body.hide-extra #midi-help { display: none !important; }
+
+#midi-diag-status { color: var(--red); font-weight: 700; font-size: 10px; }
+#midi-diag-status.ok { color: var(--green); }
+#midi-diag-note { color: #666; font-size: 8px; }
+#midi-diag-note.has-note { color: var(--accent); font-weight: 700; }
+#midi-latency-row { display: flex; align-items: center; gap: 4px; margin-top: 2px; }
+.lat-label { font-size: 7px; color: #666; }
+.lat-btn { background: #1a1a1a; border: 1px solid #333; color: #aaa; border-radius: 3px; width: 20px; height: 20px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.lat-btn:active { background: var(--purple); color: #fff; }
+#midi-latency-val { font-size: 9px; font-weight: 700; color: var(--purple); min-width: 36px; text-align: center; }
+
+#midi-help { margin: 2px 6px; padding: 4px 8px; background: #0d0d15; border: 1px solid #ff8833; border-radius: 5px; font-size: 8px; }
+#midi-help.hidden { display: none; }
+.midi-help-title { color: #ff8833; font-weight: 700; font-size: 9px; margin-bottom: 4px; }
+.midi-help-steps { display: flex; flex-direction: column; gap: 3px; }
+.midi-help-step { display: flex; gap: 4px; align-items: flex-start; color: #ccc; line-height: 1.3; }
+.midi-help-num { background: #ff8833; color: #000; border-radius: 50%; width: 14px; height: 14px; font-size: 7px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.midi-help-url { color: var(--accent); cursor: pointer; word-break: break-all; font-size: 7px; }
+.midi-help-copy { background: #1a1a0a; border: 1px solid var(--accent); color: var(--accent); border-radius: 2px; padding: 1px 4px; font-size: 7px; cursor: pointer; margin-left: 3px; }
+.midi-help-copy:active { background: var(--accent); color: #000; }
+.midi-help-alt { color: #888; border-top: 1px solid #222; padding-top: 3px; margin-top: 2px; line-height: 1.3; }
+
+#toast { position: fixed; bottom: 50px; left: 50%; transform: translateX(-50%) translateY(10px); background: var(--bg-card); border: 1px solid var(--accent); color: var(--text); font-size: 9px; letter-spacing: 0.04em; padding: 5px 12px; border-radius: 8px; opacity: 0; transition: opacity 0.3s, transform 0.3s; pointer-events: none; white-space: nowrap; z-index: 200; box-shadow: 0 0 30px rgba(0,0,0,0.8); font-weight: 600; }
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+@media (orientation: landscape) {
+  #pad-grid { gap: 5px; }
+  .pad { min-height: 60px; }
+  .pad .pname { font-size: 12px; }
+  .pad .pnum { font-size: 7px; }
+  .pad .pinfo { font-size: 5px; }
+  header .logo-main { font-size: 16px; }
+  header .logo-sub { font-size: 8px; }
+  .hdr-btn { font-size: 7px; padding: 2px 6px; }
+  .bank-tab { min-height: 28px; }
+  .bank-tab .bank-letter { font-size: 11px; }
+  .bank-tab .bank-name { font-size: 7px; }
+  .synth-grid { gap: 8px 10px; padding: 4px 2px; }
+  .param-row label { min-width: 50px; font-size: 10px; }
+  .param-row .btn-group .btn-minus, 
+  .param-row .btn-group .btn-plus,
+  .oct-row .btn-group .btn-minus, 
+  .oct-row .btn-group .btn-plus { width: 30px; height: 30px; font-size: 15px; }
+  .param-row .param-val { min-width: 40px; font-size: 11px; }
+  .oct-row .oct-val { font-size: 13px; min-width: 28px; }
+  .kb-btn { width: 36px; height: 36px; font-size: 18px; }
+  .fs-btn, .hide-btn { width: 36px; height: 36px; font-size: 20px; }
+  #keyboard { height: 36px; }
+  #oct-val { font-size: 12px; min-width: 26px; }
+}
+#app:fullscreen #pad-grid { min-height: 60vh; max-height: none; }
+#app:-webkit-full-screen #pad-grid { min-height: 60vh; max-height: none; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="logo-main"><span>Versatilidad</span> Musical <button class="help-btn" onclick="toggleHelp()">?</button></div>
+    <div class="logo-sub">🎹 Reproductor de Samples SF2</div>
+    <div class="hdr-row">
+      <button class="hdr-btn" id="btn-edit" onclick="toggleEdit()">✎ EDITAR</button>
+      <button class="hdr-btn load" onclick="document.getElementById('file-input').click()">📂 CARGAR</button>
+      <button class="hdr-btn assign" onclick="openAssignModal()">📌 ASIGNAR</button>
+      <div class="status idle" id="status">LISTO</div>
+    </div>
+  </header>
+
+  <!-- TAB BAR -->
+  <div id="tab-bar">
+    <button class="tab-btn active" data-tab="pads" onclick="switchTab('pads')"><span class="tab-icon">🎹</span> PADS</button>
+    <button class="tab-btn" data-tab="synth" onclick="switchTab('synth')"><span class="tab-icon">🎛</span> SINTETIZADOR</button>
+    <button class="tab-btn" data-tab="fx" onclick="switchTab('fx')"><span class="tab-icon">🎚</span> EFECTOS</button>
+  </div>
+
+  <!-- PANEL PADS -->
+  <div id="panel-pads" class="panel active">
+    <div id="bank-tabs-container">
+      <div class="bank-row" id="bank-row-1">
+        <div class="bank-tab" data-bank="0"><div class="bank-letter">A</div><div class="bank-name" id="bank-name-0">A</div><div class="bank-edit-dot" data-bank="0"></div></div>
+        <div class="bank-tab" data-bank="1"><div class="bank-letter">B</div><div class="bank-name" id="bank-name-1">B</div><div class="bank-edit-dot" data-bank="1"></div></div>
+        <div class="bank-tab" data-bank="2"><div class="bank-letter">C</div><div class="bank-name" id="bank-name-2">C</div><div class="bank-edit-dot" data-bank="2"></div></div>
+        <div class="bank-tab" data-bank="3"><div class="bank-letter">D</div><div class="bank-name" id="bank-name-3">D</div><div class="bank-edit-dot" data-bank="3"></div></div>
+      </div>
+      <div class="bank-row" id="bank-row-2">
+        <div class="bank-tab" data-bank="4"><div class="bank-letter">E</div><div class="bank-name" id="bank-name-4">E</div><div class="bank-edit-dot" data-bank="4"></div></div>
+        <div class="bank-tab" data-bank="5"><div class="bank-letter">F</div><div class="bank-name" id="bank-name-5">F</div><div class="bank-edit-dot" data-bank="5"></div></div>
+        <div class="midi-container"><div class="midi-item" id="btn-midi" onclick="toggleMidi()"><span class="icon">🎹</span><span class="label" id="midi-label">MIDI</span></div></div>
+        <div class="export-import-container"><div class="export-item" onclick="openExportModal()"><span class="icon">📤</span><span class="label">EXP</span></div><div class="import-item" onclick="document.getElementById('import-input').click()"><span class="icon">📥</span><span class="label">IMP</span></div></div>
+      </div>
+    </div>
+    <div id="pad-grid"></div>
+  </div>
+
+  <!-- PANEL SINTETIZADOR -->
+  <div id="panel-synth" class="panel">
+    <div class="synth-grid">
+      <div class="synth-group">
+        <div class="synth-title"><span class="highlight">🎛</span> FILTRO</div>
+        <div class="param-row"><label>CORTE</label><div class="btn-group"><button class="btn-minus" data-param="cutoff" data-step="100" data-min="20" data-max="50000" data-display="hz">−</button><span class="param-val orange" id="val-cutoff">8.0k</span><button class="btn-plus" data-param="cutoff" data-step="100" data-min="20" data-max="50000" data-display="hz">+</button></div></div>
+        <div class="param-row"><label>RESONANCIA</label><div class="btn-group"><button class="btn-minus" data-param="resonance" data-step="0.5" data-min="0" data-max="20" data-display="float">−</button><span class="param-val orange" id="val-resonance">0.5</span><button class="btn-plus" data-param="resonance" data-step="0.5" data-min="0" data-max="20" data-display="float">+</button></div></div>
+      </div>
+      <hr class="synth-divider">
+      <div class="synth-group">
+        <div class="synth-title"><span class="highlight">📈</span> ENVOLVENTE</div>
+        <div class="param-row"><label>ATAQUE</label><div class="btn-group"><button class="btn-minus" data-param="attack" data-step="0.01" data-min="0.001" data-max="2.0" data-display="time">−</button><span class="param-val green" id="val-attack">0.01</span><button class="btn-plus" data-param="attack" data-step="0.01" data-min="0.001" data-max="2.0" data-display="time">+</button></div></div>
+        <div class="param-row"><label>CAÍDA</label><div class="btn-group"><button class="btn-minus" data-param="decay" data-step="0.01" data-min="0.001" data-max="2.0" data-display="time">−</button><span class="param-val green" id="val-decay">0.05</span><button class="btn-plus" data-param="decay" data-step="0.01" data-min="0.001" data-max="2.0" data-display="time">+</button></div></div>
+        <div class="param-row"><label>SOSTENIDO</label><div class="btn-group"><button class="btn-minus" data-param="sustain" data-step="0.01" data-min="0" data-max="1.0" data-display="float">−</button><span class="param-val green" id="val-sustain">0.80</span><button class="btn-plus" data-param="sustain" data-step="0.01" data-min="0" data-max="1.0" data-display="float">+</button></div></div>
+      </div>
+      <hr class="synth-divider">
+      <div class="synth-group">
+        <div class="synth-title"><span class="highlight">🌀</span> LFO</div>
+        <div class="param-row"><label>VELOCIDAD</label><div class="btn-group"><button class="btn-minus" data-param="lfoRate" data-step="0.5" data-min="0" data-max="20" data-display="float">−</button><span class="param-val purple" id="val-lfoRate">0.0</span><button class="btn-plus" data-param="lfoRate" data-step="0.5" data-min="0" data-max="20" data-display="float">+</button></div></div>
+        <div class="param-row"><label>PROFUNDIDAD</label><div class="btn-group"><button class="btn-minus" data-param="lfoDepth" data-step="5" data-min="0" data-max="200" data-display="percent">−</button><span class="param-val purple" id="val-lfoDepth">0%</span><button class="btn-plus" data-param="lfoDepth" data-step="5" data-min="0" data-max="200" data-display="percent">+</button></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PANEL EFECTOS -->
+  <div id="panel-fx" class="panel">
+    <div class="synth-grid" style="grid-template-columns: 1fr 1fr;">
+      <div class="synth-group" style="grid-column: 1 / -1;">
+        <div class="synth-title"><span class="highlight">🎚</span> EFECTOS</div>
+        <div class="oct-row"><label>OCTAVA</label><div class="btn-group"><button class="btn-minus" id="oct-pad-dn">−</button><span class="oct-val" id="oct-pad-val">0</span><button class="btn-plus" id="oct-pad-up">+</button></div></div>
+        <hr class="synth-divider" style="margin: 2px 0;">
+      </div>
+      <div class="synth-group"><div class="synth-title"><span class="highlight">🔊</span> VOLUMEN</div>
+        <div class="param-row"><label>VOLUMEN</label><div class="btn-group"><button class="btn-minus" data-param="vol" data-step="0.01" data-min="0" data-max="2.0" data-display="factor">−</button><span class="param-val gold" id="val-vol">100%</span><button class="btn-plus" data-param="vol" data-step="0.01" data-min="0" data-max="2.0" data-display="factor">+</button></div></div>
+      </div>
+      <div class="synth-group"><div class="synth-title"><span class="highlight">🌊</span> REVERB</div>
+        <div class="param-row"><label>REVERB</label><div class="btn-group"><button class="btn-minus" data-param="reverb" data-step="0.01" data-min="0" data-max="1.0" data-display="percent">−</button><span class="param-val gold" id="val-reverb">0%</span><button class="btn-plus" data-param="reverb" data-step="0.01" data-min="0" data-max="1.0" data-display="percent">+</button></div></div>
+      </div>
+      <div class="synth-group"><div class="synth-title"><span class="highlight">⏱</span> SOLTAR</div>
+        <div class="param-row"><label>SOLTAR</label><div class="btn-group"><button class="btn-minus" data-param="release" data-step="0.05" data-min="0.01" data-max="3.0" data-display="time">−</button><span class="param-val orange" id="val-release">0.75</span><button class="btn-plus" data-param="release" data-step="0.05" data-min="0.01" data-max="3.0" data-display="time">+</button></div></div>
+      </div>
+      <div class="synth-group"><div class="synth-title"><span class="highlight">🎵</span> VIBRATO</div>
+        <div class="param-row"><label>VIBRATO</label><div class="btn-group"><button class="btn-minus" data-param="vibrato" data-step="0.01" data-min="0" data-max="1.0" data-display="percent">−</button><span class="param-val purple" id="val-vibrato">0%</span><button class="btn-plus" data-param="vibrato" data-step="0.01" data-min="0" data-max="1.0" data-display="percent">+</button></div></div>
+      </div>
+      <div class="synth-group"><div class="synth-title"><span class="highlight">🎚</span> PORTAMENTO</div>
+        <div class="param-row"><label>PORTAMENTO</label><div class="btn-group"><button class="btn-minus" data-param="portamento" data-step="0.01" data-min="0" data-max="1.0" data-display="percent">−</button><span class="param-val blue" id="val-portamento">0%</span><button class="btn-plus" data-param="portamento" data-step="0.01" data-min="0" data-max="1.0" data-display="percent">+</button></div></div>
+      </div>
+      <div class="synth-group" style="grid-column: 1 / -1;">
+        <div class="synth-title"><span class="highlight">⏳</span> DELAY (ECO)</div>
+        <div class="param-row"><label>TIEMPO</label><div class="btn-group"><button class="btn-minus" data-param="delayTime" data-step="5" data-min="0" data-max="500" data-display="ms">−</button><span class="param-val blue" id="val-delayTime">0</span><button class="btn-plus" data-param="delayTime" data-step="5" data-min="0" data-max="500" data-display="ms">+</button></div></div>
+        <div class="param-row"><label>REPETICIONES</label><div class="btn-group"><button class="btn-minus" data-param="delayFeedback" data-step="0.01" data-min="0" data-max="1.0" data-display="percent">−</button><span class="param-val blue" id="val-delayFeedback">0%</span><button class="btn-plus" data-param="delayFeedback" data-step="0.01" data-min="0" data-max="1.0" data-display="percent">+</button></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MIDI DIAG -->
+  <div id="midi-diag" class="hidden">
+    <div id="midi-diag-status">🔴 Sin dispositivo MIDI</div>
+    <div id="midi-diag-note">Toca una tecla para confirmar señal...</div>
+    <div id="midi-latency-row"><span class="lat-label">LATENCIA</span><button class="lat-btn" onclick="changeMidiLatency(-10)">−</button><span id="midi-latency-val">0 ms</span><button class="lat-btn" onclick="changeMidiLatency(10)">+</button></div>
+  </div>
+
+  <!-- HELP MIDI -->
+  <div id="midi-help" class="hidden">
+    <div class="midi-help-title">⚙️ Cómo activar MIDI en Chrome</div>
+    <div class="midi-help-steps">
+      <div class="midi-help-step"><span class="midi-help-num">1</span><span>Copia esta dirección y pégala en la barra de Chrome:<br><strong class="midi-help-url" onclick="copyMidiFlag()">chrome://flags/#unsafely-treat-insecure-origin-as-secure</strong><button class="midi-help-copy" onclick="copyMidiFlag()">📋 Copiar</button></span></div>
+      <div class="midi-help-step"><span class="midi-help-num">2</span><span>En el campo que aparece escribe: <strong>file://</strong> y presiona Enter</span></div>
+      <div class="midi-help-step"><span class="midi-help-num">3</span><span>Toca <strong>Relaunch</strong> (el botón azul de abajo)</span></div>
+      <div class="midi-help-step"><span class="midi-help-num">4</span><span>Regresa aquí y vuelve a tocar el botón <strong>MIDI</strong></span></div>
+      <div class="midi-help-alt">💡 Alternativa más simple: instala <strong>Kiwi Browser</strong> desde Play Store — ahí el MIDI funciona sin configuración extra.</div>
+    </div>
+  </div>
+
+  <!-- TECLADO -->
+  <div id="keyboard-wrap">
+    <div id="kb-header">
+      <div class="kb-control"><label>OCT</label><button class="kb-btn" id="kb-oct-dn">−</button><span id="oct-val">C4</span><button class="kb-btn" id="kb-oct-up">+</button></div>
+      <button class="fs-btn" id="btn-fullscreen" onclick="toggleFullscreen()">⛶</button>
+      <button class="hide-btn" id="btn-hide" onclick="toggleHiddenControls()">🔒</button>
+    </div>
+    <div id="keyboard"></div>
+  </div>
+</div>
+
+<!-- MODALES -->
+<div id="assign-modal"><div class="assign-box"><div class="assign-title">🎹 ASIGNAR VOZ</div><div class="assign-lbl">📝 NOMBRE DEL PAD</div><input type="text" id="assign-name" maxlength="20" placeholder="PIANO..."><div class="assign-lbl">🎵 PRESET / INSTRUMENTO</div><select id="assign-inst" size="4"></select><div class="assign-lbl">🎯 NOTA RAÍZ</div><div style="display:flex;align-items:center;gap:6px;"><button class="note-btn" id="assign-note-dn" style="background:var(--green-dim);border:2px solid var(--green-border);color:var(--green);font-size:16px;width:32px;height:32px;border-radius:6px;cursor:pointer;font-weight:700;">−</button><div class="note-val" id="assign-note" style="font-size:16px;color:var(--accent);font-weight:800;flex:1;text-align:center;">C4</div><button class="note-btn" id="assign-note-up" style="background:var(--green-dim);border:2px solid var(--green-border);color:var(--green);font-size:16px;width:32px;height:32px;border-radius:6px;cursor:pointer;font-weight:700;">+</button></div><div class="assign-actions"><button onclick="closeAssignModal()">CANCELAR</button><button class="ok" onclick="confirmAssign()">✅ ASIGNAR</button></div></div></div>
+
+<div id="bankname-modal"><div class="bankname-box"><div class="bankname-title">✏️ NOMBRE DEL BANCO</div><input type="text" id="bankname-input" maxlength="14" placeholder="CUMBIA..."><div class="bankname-actions"><button onclick="closeBankNameModal()">CANCELAR</button><button class="ok" onclick="confirmBankName()">✅ GUARDAR</button></div></div></div>
+
+<div id="help-modal"><div class="help-box"><div class="help-title">❓ AYUDA RÁPIDA</div><div class="help-content"><p><strong>🎹 PADS</strong> — Toca un pad para seleccionar su voz.</p><p><strong>✎ EDITAR</strong> — Muestra botones ✕ (borrar) y ↺ (resetear efectos).</p><p><strong>📂 CARGAR</strong> — Carga un archivo <strong>.sf2</strong>.</p><p><strong>📌 ASIGNAR</strong> — Asigna el preset seleccionado al pad activo.</p><p><strong>🎛 SINTETIZADOR</strong> — Ajusta: Filtro (Corte, Resonancia), Envolvente (Ataque, Caída, Sostenido), LFO (Velocidad, Profundidad).</p><p><strong>🎚 EFECTOS</strong> — Octava, Volumen (0-200%), Reverb, Soltar, Vibrato, Portamento, Delay (Tiempo, Repeticiones).</p><p><strong>🎹 TECLADO</strong> — Toca las teclas. Polifonía ilimitada.</p><p><strong>🎹 MIDI</strong> — Conecta un teclado MIDI vía USB OTG.</p><p><strong>⛶</strong> — Pantalla completa.</p><p><strong>📤 EXP</strong> — Guarda configuración en JSON.</p><p><strong>📥 IMP</strong> — Carga configuración desde JSON.</p><div class="credits">👤 Creador: Juan Carlos Martínez Gálvez, Tuxpan Veracruz</div></div><button class="help-close-btn" onclick="toggleHelp()">✕ CERRAR</button></div></div>
+
+<div id="export-modal"><div class="export-box"><div class="export-title">📤 EXPORTAR CONFIGURACIÓN</div><div class="export-lbl">Nombre del archivo:</div><input type="text" id="export-filename" maxlength="40" placeholder="mi_configuracion"><div class="export-actions"><button onclick="closeExportModal()">CANCELAR</button><button class="ok" onclick="confirmExport()">✅ EXPORTAR</button></div></div></div>
+
+<input type="file" id="file-input" accept=".sf2" style="display:none">
+<input type="file" id="import-input" accept=".json" style="display:none">
+<div id="toast"></div>
+
+<script>
+// ============================================================
+// SF2 Voces + Synth - VERSIÓN FINAL CON OCULTAR MEJORADO
+// ============================================================
+
+// ── CONVERSIÓN ────────────────────────────
+async function bufferToBase64(buf) { return new Promise((resolve) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result.split(',')[1]); reader.readAsDataURL(new Blob([buf])); }); }
+async function base64ToBuffer(base64) { const res = await fetch(`data:application/octet-stream;base64,${base64}`); return await res.arrayBuffer(); }
+
+// ── INDEXEDDB ─────────────────────────────
+const DB_NAME='sf2v25', STORE='pads';
+let db=null;
+function openDB(){ return new Promise((res,rej)=>{ const r=indexedDB.open(DB_NAME,1); r.onupgradeneeded=e=>{ if(!e.target.result.objectStoreNames.contains(STORE)) e.target.result.createObjectStore(STORE,{keyPath:'key'}); }; r.onsuccess=e=>{ db=e.target.result; res(); }; r.onerror=rej; }); }
+const dbKey=(b,p)=>b+'_'+p;
+function dbSave(b,p,data){ return new Promise((res,rej)=>{ const tx=db.transaction(STORE,'readwrite'); tx.objectStore(STORE).put({key:dbKey(b,p),bank:b,padId:p,...data}); tx.oncomplete=res; tx.onerror=rej; }); }
+function dbDel(b,p){ return new Promise((res,rej)=>{ const tx=db.transaction(STORE,'readwrite'); tx.objectStore(STORE).delete(dbKey(b,p)); tx.oncomplete=res; tx.onerror=rej; }); }
+function dbLoadAll(){ return new Promise((res,rej)=>{ const tx=db.transaction(STORE,'readonly'); const r=tx.objectStore(STORE).getAll(); r.onsuccess=e=>res(e.target.result); r.onerror=rej; }); }
+
+// ── PARSER SF2 ────────────────────────────
+function parseSF2(ab){
+  const u8=new Uint8Array(ab), dv=new DataView(ab);
+  const fcc=o=>String.fromCharCode(u8[o],u8[o+1],u8[o+2],u8[o+3]);
+  const u32=o=>dv.getUint32(o,true);
+  const u16=o=>dv.getUint16(o,true);
+  const str=(o,n)=>{ let s=''; for(let i=0;i<n;i++){ if(!u8[o+i]) break; s+=String.fromCharCode(u8[o+i]); } return s.trim(); };
+  if(fcc(0)!=='RIFF') throw new Error('No es RIFF');
+  if(fcc(8)!=='sfbk') throw new Error('No es SoundFont');
+  const chunks={};
+  function scan(s,e){ let o=s; while(o<e-8){ const id=fcc(o),sz=u32(o+4); if(id==='LIST') scan(o+12,o+8+sz); else chunks[id]={offset:o+8,size:sz}; o+=8+sz+(sz%2); } }
+  scan(12,ab.byteLength);
+  if(!chunks.smpl) throw new Error('SF2 sin audio (smpl)');
+  if(!chunks.shdr) throw new Error('SF2 sin shdr');
+  const shdr=[];
+  for(let i=0;i<Math.floor(chunks.shdr.size/46);i++){ const o=chunks.shdr.offset+i*46, name=str(o,20); if(name==='EOS') break; shdr.push({name, start:u32(o+20), end:u32(o+24), loopStart:u32(o+28), loopEnd:u32(o+32), rate:u32(o+36), pitch:u8[o+40]}); }
+  const phdr=[];
+  if(chunks.phdr){ for(let i=0;i<Math.floor(chunks.phdr.size/38);i++){ const o=chunks.phdr.offset+i*38,name=str(o,20); if(name==='EOP') break; phdr.push({name,bank:u16(o+22),bagIdx:u16(o+24)}); } }
+  const pbag=[],pgen=[],inst=[],ibag=[],igen=[];
+  if(chunks.pbag){ const n=Math.floor(chunks.pbag.size/4); for(let i=0;i<n;i++){ const o=chunks.pbag.offset+i*4; pbag.push({genIdx:u16(o)}); } }
+  if(chunks.pgen){ const n=Math.floor(chunks.pgen.size/4); for(let i=0;i<n;i++){ const o=chunks.pgen.offset+i*4; pgen.push({oper:u16(o),amount:u16(o+2)}); } }
+  if(chunks.inst){ for(let i=0;i<Math.floor(chunks.inst.size/22);i++){ const o=chunks.inst.offset+i*22,name=str(o,20); if(name==='EOI') break; inst.push({name,bagIdx:u16(o+20)}); } }
+  if(chunks.ibag){ const n=Math.floor(chunks.ibag.size/4); for(let i=0;i<n;i++){ const o=chunks.ibag.offset+i*4; ibag.push({genIdx:u16(o)}); } }
+  if(chunks.igen){ const n=Math.floor(chunks.igen.size/4); for(let i=0;i<n;i++){ const o=chunks.igen.offset+i*4; igen.push({oper:u16(o),amount:u16(o+2)}); } }
+  function igensOfBag(bi){ const gs=ibag[bi].genIdx,ge=bi+1<ibag.length?ibag[bi+1].genIdx:igen.length; return igen.slice(gs,ge); }
+  function getInstIdx(pIdx){ if(pIdx<0||pIdx>=phdr.length) return 0; const bs=phdr[pIdx].bagIdx, be=pIdx+1<phdr.length?phdr[pIdx+1].bagIdx:pbag.length; for(let bi=bs;bi<be;bi++){ const gs=pbag[bi].genIdx,ge=bi+1<pbag.length?pbag[bi+1].genIdx:pgen.length; for(let gi=gs;gi<ge;gi++) if(pgen[gi].oper===41) return pgen[gi].amount; } return 0; }
+  function zonesOfInst(ii){ if(ii<0||ii>=inst.length-1) return []; const bs=inst[ii].bagIdx,be=ii+1<inst.length?inst[ii+1].bagIdx:ibag.length; const z=[]; for(let bi=bs;bi<be;bi++){ const gens=igensOfBag(bi); let sIdx=-1,kLo=0,kHi=127; for(const g of gens){ if(g.oper===53) sIdx=g.amount; if(g.oper===43){ kLo=g.amount&0xFF; kHi=(g.amount>>8)&0xFF; } } if(sIdx>=0&&sIdx<shdr.length&&shdr[sIdx].end>shdr[sIdx].start) z.push({sIdx,kLo,kHi}); } return z; }
+  function getZones(pIdx){ let z=zonesOfInst(getInstIdx(pIdx)); if(!z.length){ for(let ii=0;ii<inst.length-1;ii++){ z=zonesOfInst(ii); if(z.length) break; } } if(!z.length){ for(let i=0;i<shdr.length;i++) if(shdr[i].end>shdr[i].start) z.push({sIdx:i,kLo:0,kHi:127}); } return z; }
+  return {phdr, shdr, smplOff:chunks.smpl.offset, u8, getZones};
+}
+
+function decodeSample(ctx,sf2,sIdx){ const sh=sf2.shdr[sIdx]; if(!sh) return null; const len=sh.end-sh.start; if(len<=0) return null; const buf=ctx.createBuffer(1,len,sh.rate||44100); const ch=buf.getChannelData(0); const dv=new DataView(sf2.u8.buffer, sf2.smplOff+sh.start*2, len*2); for(let i=0;i<len;i++) ch[i]=dv.getInt16(i*2,true)/32768; return {buf,sh}; }
+
+// ── ESTADO ────────────────────────────────
+const TOTAL_BANKS = 6, PADS = 9;
+let bankNames = ['A', 'B', 'C', 'D', 'E', 'F'];
+const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+
+function createEmptyPad(id) {
+  return {
+    id, name: null, instIdx: 0, rootNote: 60,
+    vol: 1.0,      // factor 0-2.0 (0% a 200%)
+    release: 0.75,
+    reverb: 0.0,
+    vibrato: 0.0,
+    eqLow: 0, eqMid: 0, eqHigh: 0,
+    cutoff: 8000, resonance: 0.5,
+    attack: 0.01, decay: 0.05, sustain: 0.80,
+    lfoRate: 0, lfoDepth: 0,
+    padOctave: 0, portamento: 0,
+    delayTime: 0,
+    delayFeedback: 0,
+    zones: [], loading: false
+  };
+}
+
+let banks = Array.from({length:TOTAL_BANKS}, () => Array.from({length:PADS}, (_,i) => createEmptyPad(i)));
+let currentBank = 0;
+let pads = banks[currentBank];
+let editMode = false;
+let audioCtx = null;
+let sf2Data = null;
+let kbOctave = 4;
+let assignTargetId = null;
+let assignRootNote = 60;
+let selectedPadId = -1;
+let bankNameTarget = 0;
+let activeNotes = [];
+
+let midiEnabled = false, midiAccess = null, midiInput = null, midiLatency = 0;
+function changeMidiLatency(delta) { midiLatency = Math.max(-200, Math.min(200, midiLatency + delta)); document.getElementById('midi-latency-val').textContent = midiLatency + ' ms'; }
+function copyMidiFlag() { const url = 'chrome://flags/#unsafely-treat-insecure-origin-as-secure'; if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(url).then(() => showToast('✅ Copiado — pégalo en la barra de Chrome')); } else { const ta = document.createElement('textarea'); ta.value = url; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); showToast('✅ Copiado — pégalo en la barra de Chrome'); } }
+function noteName(n){ return NOTE_NAMES[n%12]+Math.floor(n/12-1); }
+
+function getCtx(){ if(!audioCtx) audioCtx=new(window.AudioContext||window.webkitAudioContext)(); if(audioCtx.state==='suspended') audioCtx.resume(); return audioCtx; }
+function findZone(zones,midiNote){ let best=null,bestDist=9999; for(const z of zones){ if(midiNote>=z.kLo&&midiNote<=z.kHi) return z; const d=Math.min(Math.abs(midiNote-z.kLo),Math.abs(midiNote-z.kHi)); if(d<bestDist){bestDist=d;best=z;} } return best||zones[0]; }
+
+function selectPad(id){
+  selectedPadId = id;
+  document.querySelectorAll('.pad').forEach((el,i)=>{ el.classList.toggle('selected', i===id); const indicator = el.querySelector('.pad-indicator'); if (indicator) indicator.classList.toggle('on', i===id); });
+  if (selectedPadId >= 0 && selectedPadId < pads.length) { updateParamValues(pads[selectedPadId]); }
+}
+function flashPad(id) { const el = document.querySelector(`.pad[data-id="${id}"]`); if (!el) return; el.classList.add('pressed'); setTimeout(() => el.classList.remove('pressed'), 150); }
+
+function updateParamValues(pad) {
+  setParamDisplay('cutoff', pad.cutoff || 8000, 'hz');
+  setParamDisplay('resonance', pad.resonance !== undefined ? pad.resonance : 0.5, 'float');
+  setParamDisplay('attack', pad.attack || 0.01, 'time');
+  setParamDisplay('decay', pad.decay || 0.05, 'time');
+  setParamDisplay('sustain', pad.sustain !== undefined ? pad.sustain : 0.80, 'float');
+  setParamDisplay('lfoRate', pad.lfoRate || 0, 'float');
+  setParamDisplay('lfoDepth', pad.lfoDepth || 0, 'percent');
+  setParamDisplay('vol', pad.vol !== undefined ? pad.vol : 1.0, 'factor');
+  setParamDisplay('reverb', pad.reverb || 0, 'percent');
+  setParamDisplay('release', pad.release || 0.75, 'time');
+  setParamDisplay('vibrato', pad.vibrato || 0, 'percent');
+  setParamDisplay('portamento', pad.portamento || 0, 'percent');
+  setParamDisplay('delayTime', pad.delayTime || 0, 'ms');
+  setParamDisplay('delayFeedback', pad.delayFeedback || 0, 'percent');
+  document.getElementById('oct-pad-val').textContent = pad.padOctave || 0;
+}
+function setParamDisplay(param, value, type) {
+  const el = document.getElementById('val-' + param); if (!el) return; let display = value;
+  switch(type) {
+    case 'hz': display = value >= 1000 ? (value/1000).toFixed(1) + 'k' : value; break;
+    case 'percent': display = Math.round(value * 100) + '%'; break;
+    case 'time': display = value.toFixed(2); break;
+    case 'float': display = value.toFixed(1); break;
+    case 'ms': display = Math.round(value); break;
+    case 'factor': display = Math.round(value * 100) + '%'; break;
+  }
+  el.textContent = display;
+}
+
+// ── CAMBIO DE PARÁMETRO ──────────────────
+function changeParam(param, delta, min, max, type) {
+  if (selectedPadId < 0 || selectedPadId >= pads.length) { showToast('Selecciona un pad primero'); return; }
+  const pad = pads[selectedPadId]; let current = pad[param]; if (current === undefined) return;
+  let newVal = current + delta; newVal = Math.min(max, Math.max(min, newVal));
+  if (type === 'time') newVal = Math.round(newVal * 1000) / 1000;
+  else if (type === 'float') newVal = Math.round(newVal * 100) / 100;
+  else if (type === 'percent') newVal = Math.round(newVal * 100) / 100;
+  else if (type === 'ms') newVal = Math.round(newVal);
+  else if (type === 'factor') newVal = Math.round(newVal * 100) / 100;
+  else newVal = Math.round(newVal);
+  pad[param] = newVal; setParamDisplay(param, newVal, type);
+  clearTimeout(pad._saveTimer); pad._saveTimer = setTimeout(() => { savePad(currentBank, selectedPadId); }, 300);
+  
+  // 🔥 ACTUALIZAR VOLUMEN SIEMPRE, incluso en 0
+  if (param === 'vol') {
+    updateAllNotesVolume(newVal);
+  }
+}
+
+// ── VOLUMEN: SIEMPRE CONECTADO, SOLO AJUSTE DE GAIN ──
+function updateAllNotesVolume(newVolFactor) {
+  const gainValue = Math.min(2.0, Math.max(0, newVolFactor)) * 0.9;
+  for (const entry of activeNotes) {
+    let list = [];
+    if (entry.isChord && Array.isArray(entry.data)) list = entry.data;
+    else if (entry.data) list = [entry.data];
+    for (const data of list) {
+      if (data && data.masterGain) {
+        try {
+          data.masterGain.gain.setValueAtTime(gainValue, audioCtx.currentTime);
+        } catch(e) {}
+      }
+    }
+  }
+}
+
+function changePadOctave(delta) {
+  if (selectedPadId < 0 || selectedPadId >= pads.length) { showToast('Selecciona un pad primero'); return; }
+  const pad = pads[selectedPadId]; pad.padOctave = Math.min(3, Math.max(-3, (pad.padOctave || 0) + delta));
+  document.getElementById('oct-pad-val').textContent = pad.padOctave; savePad(currentBank, selectedPadId);
+}
+
+// ── REPETICIÓN EN BOTONES ──────────────────
+function setupHoldRepeat(btn, action, delay = 300, interval = 100) {
+  if (!btn) return; let timer = null, intervalId = null;
+  const start = (e) => { e.preventDefault(); action(); timer = setTimeout(() => { intervalId = setInterval(action, interval); }, delay); };
+  const stop = () => { clearTimeout(timer); clearInterval(intervalId); timer = null; intervalId = null; };
+  btn.addEventListener('mousedown', start); btn.addEventListener('touchstart', start, { passive: false });
+  btn.addEventListener('mouseup', stop); btn.addEventListener('touchend', stop); btn.addEventListener('touchcancel', stop); btn.addEventListener('mouseleave', stop);
+}
+
+function initParamButtons() {
+  document.querySelectorAll('.param-row .btn-minus, .param-row .btn-plus').forEach(btn => {
+    const param = btn.dataset.param; const step = parseFloat(btn.dataset.step); const min = parseFloat(btn.dataset.min); const max = parseFloat(btn.dataset.max); const display = btn.dataset.display;
+    const isMinus = btn.classList.contains('btn-minus'); let delta = isMinus ? -step : step;
+    setupHoldRepeat(btn, () => changeParam(param, delta, min, max, display));
+  });
+  setupHoldRepeat(document.getElementById('oct-pad-dn'), () => changePadOctave(-1));
+  setupHoldRepeat(document.getElementById('oct-pad-up'), () => changePadOctave(1));
+  setupHoldRepeat(document.getElementById('kb-oct-dn'), () => changeOct(-1));
+  setupHoldRepeat(document.getElementById('kb-oct-up'), () => changeOct(1));
+}
+
+// ── TABS, FULLSCREEN, RESET ──────────────
+function switchTab(tab) { 
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab)); 
+  document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + tab)); 
+}
+function toggleFullscreen(){ const btn=document.getElementById('btn-fullscreen'); if (!document.fullscreenElement && !document.webkitFullscreenElement) { const el=document.documentElement; const req=el.requestFullscreen||el.webkitRequestFullscreen||el.mozRequestFullScreen; if (req) req.call(el).catch(()=>{}); btn.textContent='⛶'; btn.classList.add('active'); } else { const ex=document.exitFullscreen||document.webkitExitFullscreen; if (ex) ex.call(document).catch(()=>{}); btn.textContent='⛶'; btn.classList.remove('active'); } }
+document.addEventListener('fullscreenchange', () => { const btn=document.getElementById('btn-fullscreen'); if (!btn) return; if (!document.fullscreenElement && !document.webkitFullscreenElement) { btn.textContent='⛶'; btn.classList.remove('active'); } });
+
+// ── OCULTAR CONTROLES ─────────────────────
+function toggleHiddenControls() {
+  const body = document.body;
+  const btn = document.getElementById('btn-hide');
+  body.classList.toggle('hide-extra');
+  const hidden = body.classList.contains('hide-extra');
+  btn.textContent = hidden ? '👁' : '🔒';
+  btn.classList.toggle('active', hidden);
+  localStorage.setItem('sf2_hideExtra', hidden ? 'true' : 'false');
+  showToast(hidden ? '🔒 Controles ocultos' : '👁 Controles visibles');
+}
+
+function loadHideState() {
+  const val = localStorage.getItem('sf2_hideExtra');
+  if (val === 'true') {
+    document.body.classList.add('hide-extra');
+    const btn = document.getElementById('btn-hide');
+    if (btn) { btn.textContent = '👁'; btn.classList.add('active'); }
+  }
+}
+
+function resetPadFx(bank, padId) {
+  const pad = banks[bank][padId]; pad.vol = 1.0; pad.release = 0.75; pad.reverb = 0.0; pad.vibrato = 0.0; pad.portamento = 0; pad.eqLow=0; pad.eqMid=0; pad.eqHigh=0; pad.cutoff=8000; pad.resonance=0.5; pad.attack=0.01; pad.decay=0.05; pad.sustain=0.80; pad.lfoRate=0; pad.lfoDepth=0; pad.padOctave=0; pad.delayTime=0; pad.delayFeedback=0;
+  dbSave(bank, padId, { name: pad.name, sf2Name: sf2Data?.name, sf2Raw: sf2Data?.ab, instIdx: pad.instIdx, rootNote: pad.rootNote, vol: pad.vol, release: pad.release, reverb: pad.reverb, vibrato: pad.vibrato, portamento: pad.portamento, eqLow: pad.eqLow, eqMid: pad.eqMid, eqHigh: pad.eqHigh, cutoff: pad.cutoff, resonance: pad.resonance, attack: pad.attack, decay: pad.decay, sustain: pad.sustain, lfoRate: pad.lfoRate, lfoDepth: pad.lfoDepth, padOctave: pad.padOctave, delayTime: pad.delayTime, delayFeedback: pad.delayFeedback });
+  renderGrid(); if (selectedPadId === padId) updateParamValues(pad); showToast('↺ PAD ' + (padId+1) + ' reiniciado');
+}
+
+// ── BANCOS ──────────────────────────────────
+function openBankNameModal(bankIdx) { bankNameTarget = bankIdx; document.getElementById('bankname-input').value = bankNames[bankIdx] || 'BANCO ' + (bankIdx+1); document.getElementById('bankname-modal').classList.add('show'); document.getElementById('bankname-modal').style.display = 'flex'; setTimeout(() => document.getElementById('bankname-input').focus(), 100); }
+function closeBankNameModal() { document.getElementById('bankname-modal').classList.remove('show'); document.getElementById('bankname-modal').style.display = 'none'; bankNameTarget = 0; }
+function confirmBankName() { const name = document.getElementById('bankname-input').value.trim() || 'BANCO ' + (bankNameTarget+1); bankNames[bankNameTarget] = name.toUpperCase(); closeBankNameModal(); updateBankTabs(); try { localStorage.setItem('sf2_bankNames', JSON.stringify(bankNames)); } catch(e) {} showToast('✏️ Banco ' + (bankNameTarget+1) + ' → ' + name.toUpperCase()); }
+
+function updateBankTabs() {
+  document.querySelectorAll('.bank-tab:not(.empty) .bank-name').forEach((el, idx) => { if (idx < 6) el.textContent = bankNames[idx] || ['A','B','C','D','E','F'][idx]; });
+  document.querySelectorAll('.bank-tab:not(.empty)').forEach((tab, idx) => { if (idx < 6) tab.classList.toggle('active', idx === currentBank); });
+  document.querySelectorAll('.bank-edit-dot').forEach((dot, idx) => { dot.onclick = (e) => { e.stopPropagation(); openBankNameModal(idx); }; dot.ontouchstart = (e) => { e.stopPropagation(); e.preventDefault(); openBankNameModal(idx); }; });
+  document.querySelectorAll('.bank-tab:not(.empty)').forEach((tab, idx) => { if (idx < 6) { tab.onclick = (e) => { if(e.target.closest('.bank-edit-dot')) return; switchBank(idx); }; tab.ontouchstart = (e) => { if(e.target.closest('.bank-edit-dot')) return; e.preventDefault(); switchBank(idx); }; } });
+}
+
+function toggleHelp() { document.getElementById('help-modal').classList.toggle('show'); document.getElementById('help-modal').style.display = document.getElementById('help-modal').classList.contains('show') ? 'flex' : 'none'; }
+
+// ── MIDI ──────────────────────────────────
+async function toggleMidi() { if (!midiEnabled) await initMidi(); else { midiEnabled = false; if (midiInput) { midiInput.onmidimessage = null; midiInput = null; } document.getElementById('midi-label').textContent = 'MIDI'; document.getElementById('btn-midi').classList.remove('active'); document.getElementById('midi-diag').classList.add('hidden'); showToast('MIDI desconectado'); } }
+async function initMidi() { if (!navigator.requestMIDIAccess) { document.getElementById('midi-diag').classList.remove('hidden'); setMidiDiagStatus('🔴 Web MIDI no disponible', false); showMidiHelp(); return; } document.getElementById('midi-diag').classList.remove('hidden'); setMidiDiagStatus('🟡 Solicitando permiso...', false); try { midiAccess = await navigator.requestMIDIAccess({ sysex: false }); midiEnabled = true; document.getElementById('midi-label').textContent = 'ON'; document.getElementById('btn-midi').classList.add('active'); document.getElementById('midi-help').classList.add('hidden'); const inputs = Array.from(midiAccess.inputs.values()); if (inputs.length > 0) connectMidiInput(inputs[0]); else { setMidiDiagStatus('🔴 Sin dispositivo — conecta por USB OTG', false); showToast('⚠️ Conecta un teclado MIDI'); } midiAccess.onstatechange = (e) => { const newInputs = Array.from(midiAccess.inputs.values()); if (newInputs.length > 0 && (!midiInput || e.port.state === 'disconnected')) { if (e.port.state !== 'disconnected') connectMidiInput(newInputs[0]); } if (newInputs.length === 0) { midiInput = null; setMidiDiagStatus('🔴 Sin dispositivo', false); } }; } catch(e) { midiEnabled = false; document.getElementById('midi-label').textContent = 'MIDI'; document.getElementById('btn-midi').classList.remove('active'); const msg = e.message || e.toString(); if (msg.includes('Permission') || msg.includes('denied')) { setMidiDiagStatus('🔴 Permiso denegado', false); showMidiHelp(); } else setMidiDiagStatus('🔴 Error: ' + msg, false); } }
+function showMidiHelp() { document.getElementById('midi-help').classList.remove('hidden'); }
+function connectMidiInput(input) { midiInput = input; midiInput.onmidimessage = onMidiMessage; setMidiDiagStatus('🟢 Conectado: ' + (midiInput.name || 'Dispositivo'), true); showToast('✅ MIDI conectado: ' + (midiInput.name || 'Dispositivo')); }
+function setMidiDiagStatus(text, ok) { const el = document.getElementById('midi-diag-status'); el.textContent = text; el.classList.toggle('ok', !!ok); }
+
+// ── PROCESAMIENTO DE MENSAJES MIDI ──────
+function onMidiMessage(msg) {
+  const data = msg.data;
+  const status = data[0];
+  const type = status & 0xF0;
+
+  if (type === 0x90 || type === 0x80) {
+    const note = data[1];
+    const velocity = data.length > 2 ? data[2] : 0;
+    const isNoteOn = (type === 0x90 && velocity > 0);
+    const isNoteOff = (type === 0x80 || (type === 0x90 && velocity === 0));
+    if (isNoteOn) {
+      document.getElementById('midi-diag-note').textContent = '🎵 Nota: ' + noteName(note) + ' (MIDI ' + note + ', vel ' + velocity + ')';
+      document.getElementById('midi-diag-note').classList.add('has-note');
+      if (midiLatency !== 0) setTimeout(() => playVoiceNote(note, velocity), Math.max(0, midiLatency));
+      else playVoiceNote(note, velocity);
+    } else if (isNoteOff) {
+      stopVoiceNote(note);
+    }
+    return;
+  }
+
+  if (type === 0xB0) {
+    const cc = data[1];
+    const value = data[2] / 127;
+    if (selectedPadId < 0) { showToast('Selecciona un pad para controlar con MIDI'); return; }
+    const pad = pads[selectedPadId];
+    if (!pad) return;
+
+    switch(cc) {
+      case 7: case 11:
+        pad.vol = Math.round(Math.min(2.0, Math.max(0, value * 2.0)) * 100) / 100;
+        setParamDisplay('vol', pad.vol, 'factor');
+        savePad(currentBank, selectedPadId);
+        updateAllNotesVolume(pad.vol);
+        showToast('Volumen: ' + Math.round(pad.vol * 100) + '%');
+        break;
+      case 91:
+        pad.reverb = Math.round(Math.min(1, Math.max(0, value)) * 100) / 100;
+        setParamDisplay('reverb', pad.reverb, 'percent');
+        savePad(currentBank, selectedPadId);
+        showToast('Reverb: ' + Math.round(pad.reverb * 100) + '%');
+        break;
+      case 93:
+        pad.delayFeedback = Math.round(Math.min(1, Math.max(0, value)) * 100) / 100;
+        setParamDisplay('delayFeedback', pad.delayFeedback, 'percent');
+        savePad(currentBank, selectedPadId);
+        showToast('Delay: ' + Math.round(pad.delayFeedback * 100) + '%');
+        break;
+      case 1:
+        pad.vibrato = Math.round(Math.min(1, Math.max(0, value)) * 100) / 100;
+        setParamDisplay('vibrato', pad.vibrato, 'percent');
+        savePad(currentBank, selectedPadId);
+        showToast('Vibrato: ' + Math.round(pad.vibrato * 100) + '%');
+        break;
+    }
+    return;
+  }
+
+  if (type === 0xE0) {
+    const lsb = data[1];
+    const msb = data[2];
+    const bend = ((msb << 7) | lsb) - 8192;
+    const semitones = (bend / 8192) * 2;
+    applyPitchBend(semitones);
+  }
+}
+
+function applyPitchBend(semitones) {
+  for (const entry of activeNotes) {
+    let list = [];
+    if (entry.isChord && Array.isArray(entry.data)) list = entry.data;
+    else if (entry.data) list = [entry.data];
+    for (const data of list) {
+      if (data && data.source) {
+        try {
+          if (data._baseRate === undefined) data._baseRate = data.source.playbackRate.value;
+          const newRate = data._baseRate * Math.pow(2, semitones / 12);
+          data.source.playbackRate.setValueAtTime(newRate, audioCtx.currentTime);
+        } catch(e) {}
+      }
+    }
+  }
+}
+
+// ── CARGAR SF2 ────────────────────────────
+document.getElementById('file-input').addEventListener('change', async e=>{ const file=e.target.files[0]; e.target.value=''; if(!file) return; setStatus('LEYENDO...','loading'); try{ const ab=await file.arrayBuffer(); const sf2=parseSF2(ab); sf2Data={ab,sf2,name:file.name.replace(/\.[^.]+$/,'')}; setStatus('LISTO','ready'); showToast('✅ ' + sf2.phdr.length + ' voces cargadas'); }catch(err){ setStatus('ERROR','error'); showToast('Error: '+err.message); console.error(err); } });
+
+// ── ASIGNAR VOZ ────────────────────────────
+function openAssignModal(){ if(selectedPadId === -1) { showToast('Selecciona un pad primero'); return; } if(!sf2Data){ showToast('Carga un SF2 primero'); return; } assignTargetId = selectedPadId; const pad = pads[assignTargetId]; assignRootNote = pad.rootNote || 60; const sel = document.getElementById('assign-inst'); sel.innerHTML = ''; sf2Data.sf2.phdr.forEach((p,i)=>{ const o=document.createElement('option'); o.value=i; o.textContent=(i+1).toString().padStart(2,'0')+' · '+(p.bank?'['+p.bank+'] ':'')+p.name; sel.appendChild(o); }); sel.value = pad.instIdx || 0; const presetIdx = parseInt(sel.value); const presetName = sf2Data.sf2.phdr[presetIdx]?.name || 'PAD'; document.getElementById('assign-name').value = pad.name || presetName.toUpperCase(); document.getElementById('assign-note').textContent = noteName(assignRootNote); document.getElementById('assign-modal').style.display='flex'; document.getElementById('assign-modal').classList.add('show'); }
+function closeAssignModal(){ document.getElementById('assign-modal').style.display='none'; document.getElementById('assign-modal').classList.remove('show'); assignTargetId=null; }
+document.getElementById('assign-inst').addEventListener('change', function(){ const idx = parseInt(this.value); if(sf2Data && sf2Data.sf2.phdr[idx]){ document.getElementById('assign-name').value = sf2Data.sf2.phdr[idx].name.toUpperCase(); } });
+document.getElementById('assign-note-up').addEventListener('click', ()=>{ assignRootNote = Math.min(127, assignRootNote + 1); document.getElementById('assign-note').textContent = noteName(assignRootNote); });
+document.getElementById('assign-note-dn').addEventListener('click', ()=>{ assignRootNote = Math.max(0, assignRootNote - 1); document.getElementById('assign-note').textContent = noteName(assignRootNote); });
+
+async function confirmAssign(){
+  if(assignTargetId===null || !sf2Data) return;
+  const pIdx = parseInt(document.getElementById('assign-inst').value) || 0;
+  const name = document.getElementById('assign-name').value.trim().toUpperCase() || ('PAD '+(assignTargetId+1));
+  const b = currentBank, p = assignTargetId;
+  const pad = banks[b][p];
+  pad.name = name; pad.instIdx = pIdx; pad.rootNote = assignRootNote;
+  pad.vol = 1.0; pad.release = 0.75; pad.reverb = 0.0; pad.vibrato = 0.0;
+  pad.portamento = 0; pad.cutoff = 8000; pad.resonance = 0.5; pad.attack = 0.01;
+  pad.decay = 0.05; pad.sustain = 0.80; pad.lfoRate = 0; pad.lfoDepth = 0;
+  pad.padOctave = 0; pad.eqLow = 0; pad.eqMid = 0; pad.eqHigh = 0;
+  pad.delayTime = 0; pad.delayFeedback = 0;
+  pad.loading = true; renderGrid(); setStatus('DECODIFICANDO...','loading'); closeAssignModal();
+  try{
+    const ctx = getCtx(); const rawZones = sf2Data.sf2.getZones(pIdx);
+    if(!rawZones.length) throw new Error('Sin samples');
+    const decoded = rawZones.map(z=>{ const d=decodeSample(ctx,sf2Data.sf2,z.sIdx); if(!d) return null; return {...z, audioBuf:d.buf, sh:d.sh}; }).filter(Boolean);
+    if(!decoded.length) throw new Error('No se decodificó audio');
+    pad.zones = decoded; pad.loading = false;
+    await dbSave(b,p,{ name, sf2Name: sf2Data.name, sf2Raw: sf2Data.ab, instIdx: pIdx, rootNote: pad.rootNote, vol: pad.vol, release: pad.release, reverb: pad.reverb, vibrato: pad.vibrato, portamento: pad.portamento, eqLow: pad.eqLow, eqMid: pad.eqMid, eqHigh: pad.eqHigh, cutoff: pad.cutoff, resonance: pad.resonance, attack: pad.attack, decay: pad.decay, sustain: pad.sustain, lfoRate: pad.lfoRate, lfoDepth: pad.lfoDepth, padOctave: pad.padOctave, delayTime: pad.delayTime, delayFeedback: pad.delayFeedback });
+    setStatus('LISTO','ready'); showToast('✅ BANCO '+['A','B','C','D','E','F'][b]+' PAD '+(p+1)+' — '+name); selectPad(p);
+  }catch(err){ pad.loading = false; setStatus('ERROR','error'); showToast('Error: '+err.message); console.error(err); }
+  renderGrid();
+}
+
+function switchBank(bankIdx){ if(bankIdx === currentBank) return; stopAllNotes(); currentBank = bankIdx; pads = banks[currentBank]; selectedPadId = -1; updateBankTabs(); renderGrid(); for(let i=0; i<pads.length; i++){ if(pads[i].zones && pads[i].zones.length){ selectPad(i); break; } } showToast('Banco ' + (bankNames[bankIdx] || ['A','B','C','D','E','F'][bankIdx])); }
+
+// ── RENDER PADS ────────────────────────────
+function renderGrid(){
+  const grid = document.getElementById('pad-grid'); grid.className = editMode ? 'edit-mode' : ''; grid.innerHTML = '';
+  pads.forEach((pad, idx) => {
+    const div = document.createElement('div'); const hasZones = pad.zones && pad.zones.length;
+    div.className = 'pad' + (hasZones ? ' loaded' : ' empty'); div.dataset.id = idx; if(idx === selectedPadId) div.classList.add('selected');
+    const indicator = document.createElement('div'); indicator.className = 'pad-indicator' + (idx === selectedPadId ? ' on' : ''); div.appendChild(indicator);
+    if(pad.loading){ div.innerHTML += '<div class="pnum">0'+(idx+1)+'</div><div class="pname" style="color:var(--orange);font-size:9px">CARGANDO...</div>'; }
+    else if(hasZones){ div.innerHTML += `<button class="del-btn" onclick="deletePad(${idx})">✕</button><button class="reset-btn" onclick="resetPadFx(${currentBank}, ${idx})">↺</button><div class="pnum">0${idx+1}</div><div class="pname">${pad.name || 'PAD '+(idx+1)}</div><div class="pnote">${noteName(pad.rootNote)}</div><div class="pinfo">${pad.zones.length} zonas</div>`; }
+    else { div.innerHTML += `<div class="pnum">0${idx+1}</div><div class="pad-empty-icon">+</div><div class="pad-empty-hint">asignar voz</div>`; }
+    div.addEventListener('touchstart', e => { if(e.target.closest('.del-btn') || e.target.closest('.reset-btn')) return; e.preventDefault(); selectPad(idx); }, {passive: false});
+    div.addEventListener('mousedown', e => { if(e.target.closest('.del-btn') || e.target.closest('.reset-btn')) return; selectPad(idx); });
+    grid.appendChild(div);
+  });
+}
+
+function savePad(b,p){ const pad = banks[b][p]; dbSave(b,p,{ name: pad.name, sf2Name: sf2Data?.name, sf2Raw: sf2Data?.ab, instIdx: pad.instIdx, rootNote: pad.rootNote, vol: pad.vol, release: pad.release, reverb: pad.reverb, vibrato: pad.vibrato, portamento: pad.portamento, eqLow: pad.eqLow, eqMid: pad.eqMid, eqHigh: pad.eqHigh, cutoff: pad.cutoff, resonance: pad.resonance, attack: pad.attack, decay: pad.decay, sustain: pad.sustain, lfoRate: pad.lfoRate, lfoDepth: pad.lfoDepth, padOctave: pad.padOctave, delayTime: pad.delayTime, delayFeedback: pad.delayFeedback }); }
+
+async function deletePad(id){ stopAllNotes(); banks[currentBank][id] = createEmptyPad(id); pads = banks[currentBank]; await dbDel(currentBank, id); renderGrid(); showToast('PAD '+(id+1)+' liberado'); if(selectedPadId === id) { for(let i=0; i<pads.length; i++){ if(pads[i].zones && pads[i].zones.length){ selectPad(i); break; } } } }
+
+// ── TECLADO ────────────────────────────────
+const W=[0,2,4,5,7,9,11], B=[1,3,null,6,8,10,null];
+function buildKeyboard(){ const kb=document.getElementById('keyboard'); kb.innerHTML=''; const W_COUNT=14, kbW=kb.offsetWidth||320; const gap=2, totalGap=(W_COUNT-1)*gap; const wW=Math.floor((kbW-totalGap)/W_COUNT); const bW=Math.floor(wW*0.6), wH=42, bH=28; let wi=0;
+  for(let oc=0; oc<2; oc++){ for(let i=0; i<7; i++){ const note=(kbOctave+oc)*12+W[i]; const k=document.createElement('div'); k.className='key white'; k.style.cssText=`left:${wi*(wW+gap)}px;width:${wW}px;height:${wH}px;`; const lbl=document.createElement('div'); lbl.className='key-label'; lbl.textContent=NOTE_NAMES[W[i]]+(kbOctave+oc); k.appendChild(lbl); addKey(k,note); kb.appendChild(k); wi++; } }
+  wi=0; for(let oc=0; oc<2; oc++){ for(let i=0; i<7; i++){ if(B[i]===null){ wi++; continue; } const note=(kbOctave+oc)*12+B[i]; const k=document.createElement('div'); k.className='key black'; k.style.cssText=`left:${wi*(wW+gap)+Math.floor(wW*0.65)}px;width:${bW}px;height:${bH}px;`; addKey(k,note); kb.appendChild(k); wi++; } }
+}
+function addKey(el,note){
+  el.addEventListener('touchstart', e=>{ e.preventDefault(); e.stopPropagation(); el.classList.add('pressed'); playVoiceNote(note); }, {passive:false});
+  el.addEventListener('touchend', e=>{ e.preventDefault(); e.stopPropagation(); el.classList.remove('pressed'); stopVoiceNote(note); }, {passive:false});
+  el.addEventListener('touchcancel', ()=>{ el.classList.remove('pressed'); stopVoiceNote(note); });
+  el.addEventListener('mousedown', e=>{ e.preventDefault(); el.classList.add('pressed'); playVoiceNote(note); });
+  el.addEventListener('mouseup', e=>{ e.preventDefault(); el.classList.remove('pressed'); stopVoiceNote(note); });
+  el.addEventListener('mouseleave', ()=>{ el.classList.remove('pressed'); stopVoiceNote(note); });
+}
+function changeOct(d){ stopAllNotes(); kbOctave=Math.min(7,Math.max(0,kbOctave+d)); document.getElementById('oct-val').textContent='C'+kbOctave; buildKeyboard(); }
+function toggleEdit(){ editMode=!editMode; document.getElementById('btn-edit').classList.toggle('active', editMode); renderGrid(); showToast(editMode?'EDITAR — botones de borrar y reset':'MODO NORMAL'); }
+
+// ── LÓGICA DE NOTAS ──────────────────────
+function playVoiceNote(midiNote, velocity = 100){
+  if(!sf2Data){ showToast('Carga un SF2'); return; }
+
+  let targetPad = null;
+  if (selectedPadId >= 0 && selectedPadId < pads.length) {
+    const pad = pads[selectedPadId];
+    if (pad.zones && pad.zones.length) targetPad = pad;
+  }
+  if (!targetPad) { showToast('Selecciona un pad con voz'); return; }
+
+  const noteData = playSingleNote(midiNote, targetPad, velocity);
+  if (noteData) {
+    activeNotes.push({ note: midiNote, data: noteData, released: false, isChord: false });
+  }
+}
+
+function playSingleNote(midiNote, targetPad, velocity) {
+  const ctx = getCtx();
+  const zone = findZone(targetPad.zones, midiNote);
+  if(!zone) return null;
+  if(!zone.audioBuf){
+    const dec = decodeSample(ctx, sf2Data.sf2, zone.sIdx);
+    if(!dec) return null;
+    zone.audioBuf = dec.buf; zone.sh = dec.sh;
+  }
+
+  const src = ctx.createBufferSource();
+  src.buffer = zone.audioBuf;
+  const pitch = zone.sh ? zone.sh.pitch : 60;
+  const padOctaveShift = (targetPad.padOctave || 0) * 12;
+  const baseRate = Math.pow(2, (midiNote - pitch + padOctaveShift) / 12);
+  src.playbackRate.value = baseRate;
+
+  const portaAmount = (targetPad.portamento || 0);
+  if (portaAmount > 0.01) {
+    const startRate = src.playbackRate.value;
+    const glideTime = 0.02 + portaAmount * 0.3;
+    src.playbackRate.setValueAtTime(startRate * 0.5, ctx.currentTime);
+    src.playbackRate.exponentialRampToValueAtTime(startRate, ctx.currentTime + glideTime);
+  }
+
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.frequency.value = Math.min(50000, Math.max(20, targetPad.cutoff || 8000));
+  filter.Q.value = Math.min(20, Math.max(0, targetPad.resonance !== undefined ? targetPad.resonance : 0.5)) + 0.1;
+
+  const envGain = ctx.createGain();
+  envGain.gain.setValueAtTime(0, ctx.currentTime);
+
+  let lfoGain=null, lfoOsc=null;
+  const lfoRate = targetPad.lfoRate || 0;
+  const lfoDepth = (targetPad.lfoDepth || 0);
+  if (lfoRate > 0.1 && lfoDepth > 0.01) {
+    lfoGain = ctx.createGain(); lfoGain.gain.value = lfoDepth * 1.5;
+    lfoOsc = ctx.createOscillator(); lfoOsc.frequency.value = lfoRate; lfoOsc.type = 'sine';
+    lfoOsc.connect(lfoGain); lfoGain.connect(src.playbackRate); lfoOsc.start(0);
+  }
+
+  let vibGain=null, vibOsc=null;
+  const vibAmount = targetPad.vibrato || 0;
+  if (vibAmount > 0.01) {
+    vibGain = ctx.createGain(); vibGain.gain.value = vibAmount * 2.5;
+    vibOsc = ctx.createOscillator(); vibOsc.frequency.value = 6.0; vibOsc.type = 'sine';
+    vibOsc.connect(vibGain); vibGain.connect(src.playbackRate); vibOsc.start(0);
+  }
+
+  const reverbAmount = Math.min(1.0, Math.max(0, (targetPad.reverb || 0)));
+  let dryGain=null, delayNodeReverb=null, reverbGain=null, feedbackGain=null;
+
+  // MASTER GAIN - SIEMPRE CONECTADO
+  const masterGain = ctx.createGain();
+  const volFactor = Math.min(2.0, Math.max(0, (targetPad.vol !== undefined ? targetPad.vol : 1.0)));
+  masterGain.gain.value = volFactor * 0.9;
+  masterGain._disconnected = false;
+  masterGain.connect(ctx.destination);
+
+  const delayTimeMs = targetPad.delayTime || 0;
+  const delayFeedback = targetPad.delayFeedback || 0;
+  let delayNodeFx = null, delayGainFx = null;
+  if (delayTimeMs > 0 && delayFeedback > 0.01) {
+    delayNodeFx = ctx.createDelay(2.0);
+    delayNodeFx.delayTime.value = delayTimeMs / 1000;
+    delayGainFx = ctx.createGain();
+    delayGainFx.gain.value = 0.5;
+  }
+
+  if (reverbAmount > 0.01) {
+    delayNodeReverb = ctx.createDelay(0.5); delayNodeReverb.delayTime.value = 0.12;
+    reverbGain = ctx.createGain(); reverbGain.gain.value = reverbAmount * 0.4;
+    feedbackGain = ctx.createGain(); feedbackGain.gain.value = 0.25;
+  }
+
+  src.connect(filter);
+  filter.connect(envGain);
+
+  if (reverbAmount > 0.01) {
+    envGain.connect(delayNodeReverb);
+    delayNodeReverb.connect(reverbGain);
+    reverbGain.connect(masterGain);
+    delayNodeReverb.connect(feedbackGain);
+    feedbackGain.connect(delayNodeReverb);
+    dryGain = ctx.createGain();
+    dryGain.gain.value = 1 - reverbAmount * 0.25;
+    envGain.connect(dryGain);
+    if (delayNodeFx && delayGainFx) {
+      dryGain.connect(delayNodeFx);
+      delayNodeFx.connect(delayGainFx);
+      delayGainFx.connect(masterGain);
+      const fbGain = ctx.createGain();
+      fbGain.gain.value = delayFeedback * 0.8;
+      delayNodeFx.connect(fbGain);
+      fbGain.connect(delayNodeFx);
+    } else {
+      dryGain.connect(masterGain);
+    }
+  } else {
+    if (delayNodeFx && delayGainFx) {
+      envGain.connect(delayNodeFx);
+      delayNodeFx.connect(delayGainFx);
+      delayGainFx.connect(masterGain);
+      const fbGain = ctx.createGain();
+      fbGain.gain.value = delayFeedback * 0.8;
+      delayNodeFx.connect(fbGain);
+      fbGain.connect(delayNodeFx);
+    } else {
+      envGain.connect(masterGain);
+    }
+  }
+
+  const now = ctx.currentTime;
+  const attack = Math.max(0.001, targetPad.attack || 0.01);
+  const decay = Math.max(0.001, targetPad.decay || 0.05);
+  const sustain = Math.min(1, Math.max(0, targetPad.sustain !== undefined ? targetPad.sustain : 0.80));
+  const release = Math.max(0.01, targetPad.release || 0.75);
+
+  envGain.gain.cancelScheduledValues(now);
+  envGain.gain.setValueAtTime(0, now);
+  envGain.gain.linearRampToValueAtTime(1, now + attack);
+  envGain.gain.linearRampToValueAtTime(sustain, now + attack + decay);
+  src.start(now);
+
+  const noteData = {
+    source: src,
+    envGain: envGain,
+    masterGain: masterGain,
+    filter: filter,
+    delayNodeReverb: delayNodeReverb,
+    reverbGain: reverbGain,
+    lfoOsc: lfoOsc,
+    lfoGain: lfoGain,
+    vibOsc: vibOsc,
+    vibGain: vibGain,
+    dryGain: dryGain,
+    feedbackGain: feedbackGain,
+    delayNodeFx: delayNodeFx,
+    delayGainFx: delayGainFx,
+    release: release,
+    midiNote: midiNote,
+    released: false,
+    _baseRate: baseRate
+  };
+  return noteData;
+}
+
+function stopVoiceNote(midiNote) {
+  const ctx = getCtx(); const now = ctx.currentTime;
+  const toRemove = [];
+  for (let i = 0; i < activeNotes.length; i++) {
+    const entry = activeNotes[i];
+    if (entry.note === midiNote && !entry.released) {
+      entry.released = true;
+      const data = entry.data;
+      if (data && !data.released) {
+        data.released = true;
+        const releaseTime = data.release || 0.1;
+        const currentVal = data.envGain.gain.value;
+        data.envGain.gain.cancelScheduledValues(now);
+        data.envGain.gain.setValueAtTime(currentVal, now);
+        data.envGain.gain.exponentialRampToValueAtTime(0.001, now + releaseTime);
+        try { data.source.stop(now + releaseTime + 0.05); } catch(e) {}
+        if (data.lfoOsc) try { data.lfoOsc.stop(now + releaseTime + 0.05); } catch(e) {}
+        if (data.vibOsc) try { data.vibOsc.stop(now + releaseTime + 0.05); } catch(e) {}
+      }
+      toRemove.push(i);
+    }
+  }
+  for (let i = toRemove.length - 1; i >= 0; i--) activeNotes.splice(toRemove[i], 1);
+}
+
+function stopAllNotes() {
+  const ctx = getCtx(); const now = ctx.currentTime;
+  for (const entry of activeNotes) {
+    if (entry.released) continue;
+    const data = entry.data;
+    if (data && !data.released) {
+      data.released = true;
+      try {
+        data.envGain.gain.cancelScheduledValues(now);
+        data.envGain.gain.setValueAtTime(data.envGain.gain.value, now);
+        data.envGain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+        data.source.stop(now + 0.1);
+      } catch(e) {}
+      if (data.lfoOsc) try { data.lfoOsc.stop(); } catch(e) {}
+      if (data.vibOsc) try { data.vibOsc.stop(); } catch(e) {}
+    }
+  }
+  activeNotes = [];
+}
+
+// ── EXPORTAR / IMPORTAR ────────────────────
+function openExportModal() {
+  if (!sf2Data) { showToast('⚠️ Carga un SF2 primero'); return; }
+  let hasData = false;
+  for (let b = 0; b < TOTAL_BANKS; b++) { for (let p = 0; p < PADS; p++) { if (banks[b][p].zones && banks[b][p].zones.length) { hasData = true; break; } } if (hasData) break; }
+  if (!hasData) { showToast('⚠️ No hay pads asignados'); return; }
+  document.getElementById('export-filename').value = (sf2Data.name || 'configuracion') + '.json';
+  document.getElementById('export-modal').style.display = 'flex'; document.getElementById('export-modal').classList.add('show');
+  setTimeout(() => document.getElementById('export-filename').focus(), 100);
+}
+function closeExportModal() { document.getElementById('export-modal').style.display = 'none'; document.getElementById('export-modal').classList.remove('show'); }
+async function confirmExport() {
+  const name = document.getElementById('export-filename').value.trim(); if (!name) { showToast('⚠️ Escribe un nombre'); return; }
+  const filename = name.endsWith('.json') ? name : name + '.json'; closeExportModal();
+  setStatus('EXPORTANDO...', 'loading'); showToast('📤 Exportando...');
+  try {
+    const allData = await dbLoadAll();
+    const exportData = await Promise.all(allData.map(async (row) => { let newRow = { ...row }; if (newRow.sf2Raw) newRow.sf2Raw = await bufferToBase64(newRow.sf2Raw); return newRow; }));
+    const config = { version: '5.0', date: new Date().toISOString(), sf2Name: sf2Data.name, bankNames: bankNames, currentBank: currentBank, kbOctave: kbOctave, data: exportData };
+    const jsonString = JSON.stringify(config); const blob = new Blob([jsonString], { type: 'application/json' }); const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+    setStatus('LISTO', 'ready'); showToast('✅ Exportado: ' + filename);
+  } catch(err) { setStatus('ERROR', 'error'); showToast('❌ Error al exportar: ' + err.message); console.error(err); }
+}
+
+document.getElementById('import-input').addEventListener('change', async function(e) {
+  const file = e.target.files[0]; e.target.value = ''; if (!file) return;
+  try {
+    setStatus('IMPORTANDO...', 'loading'); showToast('📥 Leyendo archivo...');
+    const text = await file.text(); const config = JSON.parse(text);
+    if (!config.version || !config.data || !config.bankNames) { showToast('⚠️ Archivo JSON inválido'); setStatus('LISTO', 'ready'); return; }
+    setStatus('DECODIFICANDO...', 'loading');
+    if (config.bankNames) { for (let i = 0; i < Math.min(config.bankNames.length, TOTAL_BANKS); i++) { bankNames[i] = config.bankNames[i]; } }
+    if (config.currentBank !== undefined) currentBank = config.currentBank;
+    if (config.kbOctave !== undefined) kbOctave = config.kbOctave;
+    const importData = await Promise.all(config.data.map(async (row) => { let newRow = { ...row }; if (newRow.sf2Raw) newRow.sf2Raw = await base64ToBuffer(newRow.sf2Raw); return newRow; }));
+    for (let b = 0; b < TOTAL_BANKS; b++) { for (let p = 0; p < PADS; p++) { banks[b][p] = createEmptyPad(p); } }
+    const allRows = await dbLoadAll(); for (const row of allRows) await dbDel(row.bank, row.padId);
+    const ctx = getCtx(); let loaded = 0;
+    for (const row of importData) {
+      try {
+        const b = row.bank, p = row.padId; if (b >= TOTAL_BANKS || p >= PADS) continue;
+        const pad = banks[b][p];
+        pad.name = row.name || null; pad.instIdx = row.instIdx || 0; pad.rootNote = row.rootNote || 60;
+        pad.vol = row.vol !== undefined ? row.vol : 1.0; pad.release = row.release !== undefined ? row.release : 0.75;
+        pad.reverb = row.reverb !== undefined ? row.reverb : 0.0; pad.vibrato = row.vibrato !== undefined ? row.vibrato : 0.0;
+        pad.portamento = row.portamento !== undefined ? row.portamento : 0; pad.eqLow = row.eqLow || 0; pad.eqMid = row.eqMid || 0; pad.eqHigh = row.eqHigh || 0;
+        pad.cutoff = row.cutoff !== undefined ? row.cutoff : 8000; pad.resonance = row.resonance !== undefined ? row.resonance : 0.5;
+        pad.attack = row.attack !== undefined ? row.attack : 0.01; pad.decay = row.decay !== undefined ? row.decay : 0.05;
+        pad.sustain = row.sustain !== undefined ? row.sustain : 0.80; pad.lfoRate = row.lfoRate !== undefined ? row.lfoRate : 0;
+        pad.lfoDepth = row.lfoDepth !== undefined ? row.lfoDepth : 0; pad.padOctave = row.padOctave !== undefined ? row.padOctave : 0;
+        pad.delayTime = row.delayTime !== undefined ? row.delayTime : 0; pad.delayFeedback = row.delayFeedback !== undefined ? row.delayFeedback : 0;
+        if (row.sf2Raw) {
+          try { const sf2 = parseSF2(row.sf2Raw); if (!sf2Data || row.sf2Name !== sf2Data.name) { sf2Data = { ab: row.sf2Raw, sf2, name: row.sf2Name || 'imported' }; } const rawZones = sf2.getZones(pad.instIdx); if (rawZones.length) { const decoded = rawZones.map(z => { const d = decodeSample(ctx, sf2, z.sIdx); if (!d) return null; return { ...z, audioBuf: d.buf, sh: d.sh }; }).filter(Boolean); if (decoded.length) { pad.zones = decoded; loaded++; } } } catch(e) { console.warn('Error cargando SF2 para pad', b, p, e); }
+        }
+        await dbSave(b, p, { name: pad.name, sf2Name: row.sf2Name || 'imported', sf2Raw: row.sf2Raw || null, instIdx: pad.instIdx, rootNote: pad.rootNote, vol: pad.vol, release: pad.release, reverb: pad.reverb, vibrato: pad.vibrato, portamento: pad.portamento, eqLow: pad.eqLow, eqMid: pad.eqMid, eqHigh: pad.eqHigh, cutoff: pad.cutoff, resonance: pad.resonance, attack: pad.attack, decay: pad.decay, sustain: pad.sustain, lfoRate: pad.lfoRate, lfoDepth: pad.lfoDepth, padOctave: pad.padOctave, delayTime: pad.delayTime, delayFeedback: pad.delayFeedback });
+      } catch(e) { console.warn('Error procesando fila', row, e); }
+    }
+    pads = banks[currentBank]; updateBankTabs(); buildKeyboard(); renderGrid();
+    for (let i = 0; i < pads.length; i++) { if (pads[i].zones && pads[i].zones.length) { selectPad(i); break; } }
+    document.getElementById('oct-val').textContent = 'C' + kbOctave; setStatus('LISTO', 'ready'); showToast('✅ Importados ' + loaded + ' pads de ' + importData.length);
+  } catch(err) { setStatus('ERROR', 'error'); showToast('❌ Error al importar: ' + err.message); console.error(err); }
+});
+
+function setStatus(t,c){ const el=document.getElementById('status'); el.textContent=t; el.className='status '+(c||''); }
+function showToast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2800); }
+
+// ── INIT ──────────────────────────────────
+async function init(){
+  setStatus('INICIANDO...','loading');
+  try { const saved = localStorage.getItem('sf2_bankNames'); if(saved) { const parsed = JSON.parse(saved); if(Array.isArray(parsed) && parsed.length === TOTAL_BANKS) bankNames = parsed; } } catch(e) {}
+  loadHideState();
+  await openDB(); const ctx=getCtx(); const saved=await dbLoadAll(); let count=0; const sf2Cache={};
+  for(const row of saved){
+    try{ if(!row.sf2Raw) continue; const key=row.sf2Name||'default'; if(!sf2Cache[key]) sf2Cache[key]=parseSF2(row.sf2Raw); const sf2=sf2Cache[key]; if(!sf2Data){ sf2Data={ab:row.sf2Raw, sf2, name:row.sf2Name||'SF2'}; } const pad=banks[row.bank][row.padId]; pad.name = row.name || null; pad.instIdx = row.instIdx || 0; pad.rootNote = row.rootNote || 60; pad.vol = row.vol !== undefined ? row.vol : 1.0; pad.release = row.release !== undefined ? row.release : 0.75; pad.reverb = row.reverb !== undefined ? row.reverb : 0.0; pad.vibrato = row.vibrato !== undefined ? row.vibrato : 0.0; pad.portamento = row.portamento !== undefined ? row.portamento : 0; pad.eqLow = row.eqLow || 0; pad.eqMid = row.eqMid || 0; pad.eqHigh = row.eqHigh || 0; pad.cutoff = row.cutoff !== undefined ? row.cutoff : 8000; pad.resonance = row.resonance !== undefined ? row.resonance : 0.5; pad.attack = row.attack !== undefined ? row.attack : 0.01; pad.decay = row.decay !== undefined ? row.decay : 0.05; pad.sustain = row.sustain !== undefined ? row.sustain : 0.80; pad.lfoRate = row.lfoRate !== undefined ? row.lfoRate : 0; pad.lfoDepth = row.lfoDepth !== undefined ? row.lfoDepth : 0; pad.padOctave = row.padOctave !== undefined ? row.padOctave : 0; pad.delayTime = row.delayTime !== undefined ? row.delayTime : 0; pad.delayFeedback = row.delayFeedback !== undefined ? row.delayFeedback : 0; pad.loading = false; const rawZones=sf2.getZones(pad.instIdx); pad.zones=rawZones.map(z=>{ const d=decodeSample(ctx,sf2,z.sIdx); if(!d) return null; return {...z, audioBuf:d.buf, sh:d.sh}; }).filter(Boolean); if(pad.zones.length) count++; }catch(e){ console.warn('Restore error',e); } }
+  pads = banks[currentBank]; updateBankTabs(); buildKeyboard(); renderGrid();
+  for(let i=0; i<pads.length; i++){ if(pads[i].zones && pads[i].zones.length){ selectPad(i); break; } }
+  setStatus('LISTO','ready'); initParamButtons(); if (selectedPadId >= 0) updateParamValues(pads[selectedPadId]);
+  if(count) showToast(count+' pads restaurados');
+}
+window.addEventListener('load', init); window.addEventListener('resize', buildKeyboard);
+</script>
+</body>
+</html>

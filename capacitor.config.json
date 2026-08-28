@@ -1,0 +1,9 @@
+{
+  "appId": "com.tuapps.samplesvoces",
+  "appName": "SF2 Samples",
+  "webDir": "www",
+  "bundledWebRuntime": false,
+  "android": {
+    "allowMixedContent": true
+  }
+}
